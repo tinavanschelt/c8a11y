@@ -1,23 +1,30 @@
 {
- "manifest_version": 2,
- "name": "c8a11y",
- "version": "0.1.0",
- "description": "This is a sample description",
- "short_name": "Short Sample Name",
- "permissions": ["activeTab", "declarativeContent", "storage", "<all_urls>"],
- "content_scripts": [
-   {
-     "matches": ["<all_urls>"],
-     "css": ["background.css"],
-     "js": ["background.js"]
-   }
- ],
- "browser_action": {
-   "default_title": "Does a thing when you do a thing",
-   "default_popup": "popup.html",
-   "default_icon": {
-     "16": "icons/icon16.png",
-     "32": "icons/icon32.png"
-   }
- }
+  "name": "c8a11y",
+  "version": "0.0.1",
+  "manifest_version": 2,
+  "description": "",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "browser_action": {
+    "default_icon": "icons/icon19.png",
+    "default_title": "browser action demo",
+    "default_popup": "src/browser_action/browser_action.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "css": [
+        "src/inject/inject.css"
+      ]
+    },
+    {
+      "matches": ["<all_urls>"],
+      "js": [
+        "src/inject/inject.js"
+      ]
+    }
+  ]
 }
