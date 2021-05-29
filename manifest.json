@@ -1,0 +1,23 @@
+{
+ "manifest_version": 1,
+ "name": "c8a11y",
+ "version": "0.1.0",
+ "description": "This is a sample description",
+ "short_name": "Short Sample Name",
+ "permissions": ["activeTab", "declarativeContent", "storage", "<all_urls>"],
+ "content_scripts": [
+   {
+     "matches": ["<all_urls>"],
+     "css": ["bakcground.css"],
+     "js": ["bakcground.js"]
+   }
+ ],
+ "browser_action": {
+   "default_title": "Does a thing when you do a thing",
+   "default_popup": "popup.html",
+   "default_icon": {
+     "16": "icons/icon16.png",
+     "32": "icons/icon32.png"
+   }
+ }
+}
