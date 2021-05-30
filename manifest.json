@@ -20,7 +20,7 @@
     },
     {
       "matches": ["<all_urls>"],
-      "js": ["src/inject/inject.js"]
+      "js": ["src/inject/inject.js", "src/inject/scripts/tf.js", "src/inject/scripts/face-landmarks-detection.js"]
     }
   ]
 }
