@@ -2,6 +2,15 @@
  * Place your custom CSS styles here.
  **/
 
- body {
-     color: pink;
- }
+body {
+  color: purple;
+}
+
+#videoEl {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 265px;
+  height: 200px;
+  background-color: #666;
+}
