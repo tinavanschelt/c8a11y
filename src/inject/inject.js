@@ -195,8 +195,8 @@ chrome.extension.sendMessage({}, function (response) {
       }
 
       function cleanupAnswerX(x) {
-        if (x > bodyEl.clientWidth) {
-          return bodyEl.clientWidth - 10;
+        if (x > window.innerWidth) {
+          return window.innerWidth - 10;
         } else if (x < 0) {
           return 10;
         }
@@ -205,8 +205,8 @@ chrome.extension.sendMessage({}, function (response) {
       }
 
       function cleanupAnswerY(y) {
-        if (y > bodyEl.clientHeight) {
-          return bodyEl.clientHeight - 10;
+        if (y > window.innerHeight) {
+          return window.innerHeight - 10;
         } else if (y < 0) {
           return 10;
         }
