@@ -306,6 +306,7 @@ button.c8a11y-predict-toggle-button {
   top: 0;
   left: 0;
   height: var(--video-height);
+  margin: 1rem;
   overflow: hidden;
   width: var(--video-width);
   z-index: 10000;

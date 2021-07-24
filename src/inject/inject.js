@@ -13,8 +13,8 @@ chrome.extension.sendMessage({}, function (response) {
       let canvasEl;
       let overlayEl;
 
-      const initialDotCountX = 8;
-      const initialDotCountY = 6;
+      const initialDotCountX = 6;
+      const initialDotCountY = 8;
       const additionalDotCountX = 7;
       const additionalDotCountY = 5;
       const totalDataPointsForTraining =
@@ -270,6 +270,7 @@ chrome.extension.sendMessage({}, function (response) {
       }
 
       async function train() {
+        destroyOverlay();
         updateInfoBanner(
           "Training model...<div class='c8a11y-progress-bar'><div class='c8a11y-progress'></div></div>"
         );
@@ -469,10 +470,16 @@ chrome.extension.sendMessage({}, function (response) {
       function initOverlay() {
         overlayEl = document.createElement("div");
         overlayEl.classList.add("c8a11y-overlay");
+        bodyEl.style.overflow = 'hidden';
         bodyEl.appendChild(overlayEl);
 
         initDataCollection();
         addInitialCalibrationDots();
+      }
+
+      function destroyOverlay() {
+        bodyEl.removeChild(overlayEl);
+        bodyEl.style.overflow = 'auto';
       }
 
       async function initVideoStream() {
