@@ -194,8 +194,8 @@ chrome.extension.sendMessage({}, function (response) {
       }
 
       function cleanupAnswerX(x) {
-        if (x > window.innerWidth) {
-          return window.innerWidth - 10;
+        if (x > bodyEl.clientWidth) {
+          return bodyEl.clientWidth - 10;
         } else if (x < 0) {
           return 10;
         }
@@ -204,9 +204,7 @@ chrome.extension.sendMessage({}, function (response) {
       }
 
       function cleanupAnswerY(y) {
-        if (y > window.innerHeight) {
-          return window.innerHeight - 10;
-        } else if (y < 0) {
+        if (y < 0) {
           return 10;
         }
 
@@ -232,7 +230,7 @@ chrome.extension.sendMessage({}, function (response) {
         predictedIrisTarget.classList.add("c8a11y-predicted-iris-target");
         predictedIrisTarget.style.left = `${xPrediction}px`;
         predictedIrisTarget.style.top = `${yPrediction}px`;
-        bodyEl.appendChild(predictedIrisTarget);
+        overlayEl.appendChild(predictedIrisTarget);
 
         // cleanup
         answer.dispose();
@@ -270,7 +268,8 @@ chrome.extension.sendMessage({}, function (response) {
       }
 
       async function train() {
-        destroyOverlay();
+        // Unlock scroll on body
+        bodyEl.style.overflow = 'auto';
         updateInfoBanner(
           "Training model...<div class='c8a11y-progress-bar'><div class='c8a11y-progress'></div></div>"
         );
@@ -470,16 +469,12 @@ chrome.extension.sendMessage({}, function (response) {
       function initOverlay() {
         overlayEl = document.createElement("div");
         overlayEl.classList.add("c8a11y-overlay");
+        // Lock scroll on body
         bodyEl.style.overflow = 'hidden';
         bodyEl.appendChild(overlayEl);
 
         initDataCollection();
         addInitialCalibrationDots();
-      }
-
-      function destroyOverlay() {
-        bodyEl.removeChild(overlayEl);
-        bodyEl.style.overflow = 'auto';
       }
 
       async function initVideoStream() {
