@@ -466,7 +466,7 @@ chrome.extension.sendMessage({}, function (response) {
         canvasEl = document.createElement("canvas");
         const containerEl = document.createElement("div");
 
-        containerEl.classList.add("c8a11y-container");
+        containerEl.classList.add("c8a11y-stream-container");
         canvasEl.classList.add("c8a11y-canvas");
         videoEl.classList.add("c8a11y-video");
 

@@ -12,6 +12,7 @@
    ========================================================================== */
 
 :root {
+  --border-radius: 10px;
   --color-confirm: #3f51b5;
   --color-confirm-highlight: #26389C;
   --video-width: 220px;
@@ -220,7 +221,7 @@ button.c8a11y-predict-toggle-button {
   position: absolute;
   right: 0;
   top: 0.25rem;
-  z-index: 21;
+  z-index: 10001;
 }
 
 .c8a11y-info-banner {
@@ -235,6 +236,7 @@ button.c8a11y-predict-toggle-button {
   top: 0;
   height: 0;
   left: 0;
+  z-index: 10003;
 }
 
 .c8a11y-info-banner.active {
@@ -244,14 +246,14 @@ button.c8a11y-predict-toggle-button {
 .c8a11y-info-modal {
   background-color: white;
   border: 1px solid black;
-  border-radius: 10px;
+  border-radius: var(--border-radius);
   box-shadow: 1px 1px 3px 0px rgba(0, 0, 0, 0.2);
   left: 30%;
   padding: 0.5rem 1.5rem 1rem;
   position: absolute;
   top: 25%;
   width: 40%;
-  z-index: 21;
+  z-index: 10000;
 }
 
 .c8a11y-overlay {
@@ -260,7 +262,7 @@ button.c8a11y-predict-toggle-button {
   position: absolute;
   top: 0;
   right: 0;
-  z-index: 20;
+  z-index: 10002;
 }
 
 .c8a11y-mouse-target {
@@ -278,17 +280,20 @@ button.c8a11y-predict-toggle-button {
   position: relative;
 }
 
-.c8a11y-container {
+.c8a11y-stream-container {
   background-color: #fff;
+  border-radius: var(--border-radius);
   position: absolute;
   top: 0;
   left: 0;
   width: var(--video-width);
   height: var(--video-height);
+  z-index: 10000;
 }
 
 .c8a11y-video {
   background-color: #ccc;
+  border-radius: var(--border-radius);
   height: var(--video-height);
   left: 0;
   position: absolute;
