@@ -13,8 +13,8 @@ chrome.extension.sendMessage({}, function (response) {
       let canvasEl;
       let overlayEl;
 
-      const initialDotCountX = 2;
-      const initialDotCountY = 2;
+      const initialDotCountX = 8;
+      const initialDotCountY = 6;
       const additionalDotCountX = 7;
       const additionalDotCountY = 5;
       const totalDataPointsForTraining =
@@ -25,8 +25,6 @@ chrome.extension.sendMessage({}, function (response) {
       const dataSet = [];
       const inputsMin = [];
       const inputsMax = [];
-      const outputsMin = [];
-      const outputsMax = [];
 
       const TOTAL_EPOCHS = 800;
       const VIDEO_WIDTH = 220;
@@ -268,9 +266,7 @@ chrome.extension.sendMessage({}, function (response) {
       }
 
       function updateProgress(progressAsPercentage) {
-        bodyEl.querySelector(
-          ".c8a11y-progress"
-        ).style.width = `${progressAsPercentage}%`;
+        bodyEl.querySelector(".c8a11y-progress").style.width = `${progressAsPercentage}%`;  
       }
 
       async function train() {
@@ -305,7 +301,7 @@ chrome.extension.sendMessage({}, function (response) {
 
         const printCallback = {
           onEpochEnd: (epoch, log) => {
-            updateProgress((epoch / TOTAL_EPOCHS) * 100);
+            updateProgress(epoch / TOTAL_EPOCHS * 100);
             console.log(epoch, log);
           },
         };
