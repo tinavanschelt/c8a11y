@@ -13,8 +13,8 @@ chrome.extension.sendMessage({}, function (response) {
       let canvasEl;
       let overlayEl;
 
-      const initialDotCountX = 8;
-      const initialDotCountY = 6;
+      const initialDotCountX = 2;
+      const initialDotCountY = 2;
       const additionalDotCountX = 7;
       const additionalDotCountY = 5;
       const totalDataPointsForTraining =
@@ -28,6 +28,7 @@ chrome.extension.sendMessage({}, function (response) {
       const outputsMin = [];
       const outputsMax = [];
 
+      const TOTAL_EPOCHS = 800;
       const VIDEO_WIDTH = 220;
       const VIDEO_HEIGHT = 180;
       const BLACK = "#000";
@@ -266,8 +267,16 @@ chrome.extension.sendMessage({}, function (response) {
         bodyEl.querySelector(".c8a11y-info-banner").appendChild(toggleButton);
       }
 
+      function updateProgress(progressAsPercentage) {
+        bodyEl.querySelector(
+          ".c8a11y-progress"
+        ).style.width = `${progressAsPercentage}%`;
+      }
+
       async function train() {
-        updateInfoBanner("Training model...");
+        updateInfoBanner(
+          "Training model...<div class='c8a11y-progress-bar'><div class='c8a11y-progress'></div></div>"
+        );
         const { inputs, outputs } = await cleanupData(dataSet);
         isAlreadyTraining = true;
 
@@ -296,6 +305,7 @@ chrome.extension.sendMessage({}, function (response) {
 
         const printCallback = {
           onEpochEnd: (epoch, log) => {
+            updateProgress((epoch / TOTAL_EPOCHS) * 100);
             console.log(epoch, log);
           },
         };
@@ -303,7 +313,7 @@ chrome.extension.sendMessage({}, function (response) {
         // train model
         model
           .fit(xs, ys, {
-            epochs: 1000,
+            epochs: TOTAL_EPOCHS,
             callbacks: printCallback,
             batchSize: 10,
           })
@@ -363,7 +373,7 @@ chrome.extension.sendMessage({}, function (response) {
         return dotEl;
       }
 
-      async function removeDot(e, dotEl) {
+      function removeDot(e, dotEl) {
         dotEl.classList.add("animate");
 
         setTimeout(function () {
@@ -391,15 +401,17 @@ chrome.extension.sendMessage({}, function (response) {
           ]);
 
           dotEl.addEventListener("click", async function (e) {
-            await removeDot(e, dotEl);
+            removeDot(e, dotEl);
 
-            if (
-              !overlayEl.hasChildNodes() &&
-              dataSet.length >= totalDataPointsForTraining &&
-              !isAlreadyTraining
-            ) {
-              train();
-            }
+            setTimeout(function () {
+              if (
+                !overlayEl.hasChildNodes() &&
+                dataSet.length >= totalDataPointsForTraining &&
+                !isAlreadyTraining
+              ) {
+                train();
+              }
+            }, 500);
           });
         });
       }
@@ -424,17 +436,19 @@ chrome.extension.sendMessage({}, function (response) {
           ]);
 
           dotEl.addEventListener("click", async function (e) {
-            await removeDot(e, dotEl);
+            removeDot(e, dotEl);
 
-            if (!overlayEl.hasChildNodes() && !isAlreadyTraining) {
-              initInfoModal(
-                `<p>Great! You've collected ${dataSet.length} data points. For a more accurate prediction we recommend doing one more round of data collection before training your model.</p>`,
-                "OK!",
-                addAdditionalCalibrationDots,
-                "Train model using current data set",
-                train
-              );
-            }
+            setTimeout(function () {
+              if (!overlayEl.hasChildNodes() && !isAlreadyTraining) {
+                initInfoModal(
+                  `<p>Great! You've collected ${dataSet.length} data points. For a more accurate prediction we recommend doing one more round of data collection before training your model.</p>`,
+                  "OK!",
+                  addAdditionalCalibrationDots,
+                  "Train model using current data set",
+                  train
+                );
+              }
+            }, 500);
           });
         });
       }
@@ -453,7 +467,6 @@ chrome.extension.sendMessage({}, function (response) {
       }
 
       function setShouldRenderOverlay(val) {
-        console.log("HIER!");
         shouldRenderOverlay = val;
       }
 

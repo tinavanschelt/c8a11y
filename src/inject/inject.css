@@ -14,7 +14,7 @@
 :root {
   --border-radius: 10px;
   --color-confirm: #3f51b5;
-  --color-confirm-highlight: #26389C;
+  --color-confirm-highlight: #26389c;
   --video-width: 220px;
   --video-height: 180px;
   --initial-distance-from-edge: 0.5rem;
@@ -206,7 +206,7 @@ button:hover {
   background-color: var(--color-confirm-highlight);
 }
 
-button.dismiss {    
+button.dismiss {
   background-color: gray;
   margin-right: 1rem;
 }
@@ -241,6 +241,25 @@ button.c8a11y-predict-toggle-button {
 
 .c8a11y-info-banner.active {
   height: 40px;
+}
+
+.c8a11y-progress-bar {
+  background-color: white;
+  border-radius: var(--border-radius);
+  height: 15px;
+  margin: 0 0.5rem;
+  overflow: hidden;
+  position: relative;
+  width: 200px;
+}
+
+.c8a11y-progress {
+  background-color: #8bc34a;
+  border-radius: var(--border-radius);
+  height: 15px;
+  left: 0;
+  position: absolute;
+  top: 0;
 }
 
 .c8a11y-info-modal {
@@ -286,8 +305,9 @@ button.c8a11y-predict-toggle-button {
   position: absolute;
   top: 0;
   left: 0;
-  width: var(--video-width);
   height: var(--video-height);
+  overflow: hidden;
+  width: var(--video-width);
   z-index: 10000;
 }
 
@@ -322,9 +342,18 @@ button.c8a11y-predict-toggle-button {
 }
 
 @keyframes dot-animation {
-  0%   { height: 1.5rem; width: 1.5rem;}
-  50%  { height: 2rem; width: 2rem;}
-  100% { height: 1.5rem; width: 1.5rem;}
+  0% {
+    height: 1.5rem;
+    width: 1.5rem;
+  }
+  50% {
+    height: 2rem;
+    width: 2rem;
+  }
+  100% {
+    height: 1.5rem;
+    width: 1.5rem;
+  }
 }
 
 .c8a11y-dot.animate {
