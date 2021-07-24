@@ -13,8 +13,8 @@ chrome.extension.sendMessage({}, function (response) {
       let canvasEl;
       let overlayEl;
 
-      const initialDotCountX = 6;
-      const initialDotCountY = 8;
+      const initialDotCountX = 8;
+      const initialDotCountY = 6;
       const additionalDotCountX = 7;
       const additionalDotCountY = 5;
       const totalDataPointsForTraining =
