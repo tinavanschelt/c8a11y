@@ -2,6 +2,8 @@
 
 ## Overview
 
+c8a11y (pronounced “ca-lee”) is a Google Chrome extension developed as part of a Bachelor’s dissertation. The extension utilises [Tensorflow.js](https://www.tensorflow.org/js) and the [face-landmarks-detection model](https://github.com/tensorflow/tfjs-models/tree/master/face-landmarks-detection) to predict where a user is looking in the browser. The aim of the project was to research how the availability of gaze detection software for cognitive accessibility research can be simplified and improved.
+
 ## Instructions
 
 1. Download `c8a11y` and unzip
