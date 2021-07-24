@@ -254,7 +254,7 @@ button.c8a11y-predict-toggle-button {
 }
 
 .c8a11y-progress {
-  background-color: #8bc34a;
+  background-color: #00bcd4;
   border-radius: var(--border-radius);
   height: 15px;
   left: 0;
@@ -310,6 +310,15 @@ button.c8a11y-predict-toggle-button {
   overflow: hidden;
   width: var(--video-width);
   z-index: 10000;
+}
+
+.c8a11y-peephole {
+  border: 2px solid #00bcd4; 
+  left: 30%;
+  height: 20%;
+  position: absolute;
+  top: 30%;
+  width: 40%;
 }
 
 .c8a11y-video {
@@ -394,6 +403,7 @@ button.c8a11y-predict-toggle-button {
 
 .c8a11y-initial-dot.x8 {
   right: var(--initial-distance-from-edge);
+  margin: 0 !important;
 }
 
 .c8a11y-initial-dot.y1 {
@@ -418,6 +428,7 @@ button.c8a11y-predict-toggle-button {
 
 .c8a11y-initial-dot.y6 {
   bottom: var(--initial-distance-from-edge);
+  margin: 0 !important;
 }
 
 /* ADDITIONAL DOTS */

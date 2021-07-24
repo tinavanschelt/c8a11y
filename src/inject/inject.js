@@ -31,7 +31,7 @@ chrome.extension.sendMessage({}, function (response) {
       const VIDEO_HEIGHT = 180;
       const BLACK = "#000";
       const GREEN = "#28CF75";
-      const RED = "#FF0000";
+      const RED = "#F44336";
 
       const model = tf.sequential();
 
@@ -481,14 +481,17 @@ chrome.extension.sendMessage({}, function (response) {
         videoEl = document.createElement("video");
         canvasEl = document.createElement("canvas");
         const containerEl = document.createElement("div");
+        peepholeEl = document.createElement("div");
 
         containerEl.classList.add("c8a11y-stream-container");
         canvasEl.classList.add("c8a11y-canvas");
         videoEl.classList.add("c8a11y-video");
+        peepholeEl.classList.add("c8a11y-peephole");
 
         bodyEl.appendChild(containerEl);
         containerEl.appendChild(canvasEl);
         containerEl.appendChild(videoEl);
+        containerEl.appendChild(peepholeEl);
 
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: false,
