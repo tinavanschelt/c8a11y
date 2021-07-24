@@ -19,7 +19,7 @@
 
 5. Click on `Details` and change **Site access** to "on click"
 
-![Screenshot 2021-07-24 at 10 56 17](https://user-images.githubusercontent.com/12873914/126874022-c6722b19-ddbc-44f8-ad95-3b1dcbadd6f9.png)
+![Screenshot 2021-07-24 at 10 56 17](https://user-images.githubusercontent.com/12873914/126874194-eadf0005-eb5b-4b45-bdc6-22d2a2ee5d69.png)
 
 6. Pin the application to the top bar
 
