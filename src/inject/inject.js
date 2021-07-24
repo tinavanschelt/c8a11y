@@ -3,16 +3,467 @@ chrome.extension.sendMessage({}, function (response) {
     if (document.readyState === "complete") {
       clearInterval(readyStateCheckInterval);
 
-      // Constants
-      const NUM_KEYPOINTS = 468;
-      const NUM_IRIS_KEYPOINTS = 5;
-      const VIDEO_WIDTH = 400;
-      const VIDEO_HEIGHT = 300;
+      let videoStreamHasLoaded = false;
+      let firstLoad = true;
+      let isAlreadyTraining = false;
+      let shouldPredict = true;
+
+      const bodyEl = document.querySelector("body");
+      let videoEl;
+      let canvasEl;
+      let overlayEl;
+
+      const initialDotCountX = 8;
+      const initialDotCountY = 6;
+      const additionalDotCountX = 7;
+      const additionalDotCountY = 5;
+      const totalDataPointsForTraining =
+        initialDotCountX +
+        initialDotCountY +
+        additionalDotCountX * additionalDotCountY;
+
+      const dataSet = [];
+      const inputsMin = [];
+      const inputsMax = [];
+      const outputsMin = [];
+      const outputsMax = [];
+
+      const VIDEO_WIDTH = 220;
+      const VIDEO_HEIGHT = 180;
       const BLACK = "#000";
       const GREEN = "#28CF75";
+      const RED = "#FF0000";
 
-      // Setup video stream
-      async function setupVideoStream(videoEl) {
+      const model = tf.sequential();
+
+      // MOUSE MOVEMENT + HIGHLIGHTER
+
+      function getMousePosition(e) {
+        return { x: e.clientX, y: e.clientY };
+      }
+
+      function resetMouseHighlighter() {
+        const prevTarget = document.querySelector(".c8a11y-mouse-target");
+
+        if (prevTarget) {
+          bodyEl.removeChild(prevTarget);
+        }
+      }
+
+      function mouseHighlighter(e) {
+        resetMouseHighlighter();
+        const mouseCoords = getMousePosition(e);
+        const mouseTarget = document.createElement("div");
+        mouseTarget.classList.add("c8a11y-mouse-target");
+        mouseTarget.style.left = `${mouseCoords.x - 12}px`;
+        mouseTarget.style.top = `${mouseCoords.y - 12}px`;
+        bodyEl.appendChild(mouseTarget);
+      }
+
+      function initMouseHighlighter() {
+        bodyEl.addEventListener("mousemove", mouseHighlighter);
+      }
+
+      function destroyMouseHighlighter() {
+        resetMouseHighlighter();
+        bodyEl.removeEventListener("mousemove", mouseHighlighter);
+      }
+
+      // CALCULATIONS
+
+      function distance(a, b) {
+        return Math.sqrt(Math.pow(a[0] - b[0], 2) + Math.pow(a[1] - b[1], 2));
+      }
+
+      async function getFacialKeypointsPrediction(videoEl) {
+        const faceLandmarksModel = await faceLandmarksDetection.load(
+          faceLandmarksDetection.SupportedPackages.mediapipeFacemesh,
+          { maxFaces: 1 }
+        );
+
+        const predictions = await faceLandmarksModel.estimateFaces({
+          input: videoEl,
+          returnTensors: false,
+          flipHorizontal: false,
+          predictIrises: true,
+        });
+
+        return predictions;
+      }
+
+      async function getCurrentCoordinates() {
+        const predictions = await getFacialKeypointsPrediction(videoEl);
+        const keypoints = predictions[0].annotations;
+
+        const leftIrisCenter = keypoints.leftEyeIris[0];
+        const rightIrisCenter = keypoints.rightEyeIris[0];
+        const leftIrisCenterXY = [leftIrisCenter[0], leftIrisCenter[1]];
+        const rightIrisCenterXY = [rightIrisCenter[0], rightIrisCenter[1]];
+
+        const leftEyeUpper = keypoints["leftEyeUpper0"][0];
+        const leftViewportXY = [leftEyeUpper[0], leftEyeUpper[1]];
+
+        return {
+          leftIrisCenterXY,
+          rightIrisCenterXY,
+          leftViewportXY,
+        };
+      }
+
+      async function calculateDistances(coordinates) {
+        const { leftIrisCenterXY, rightIrisCenterXY, leftViewportXY } =
+          coordinates;
+
+        const leftIrisXDistance = leftViewportXY[0] - leftIrisCenterXY[0];
+        const leftIrisYDistance = leftViewportXY[1] - leftIrisCenterXY[1];
+        const rightIrisXDistance = leftViewportXY[0] - rightIrisCenterXY[0];
+        const rightIrisYDistance = leftViewportXY[1] - rightIrisCenterXY[1];
+
+        return [
+          leftIrisXDistance,
+          leftIrisYDistance,
+          rightIrisXDistance,
+          rightIrisYDistance,
+        ];
+      }
+
+      function calculateMinMaxValues(
+        arrayOfValues,
+        minValueInArray,
+        maxValueInArray
+      ) {
+        const axis1 = arrayOfValues.map((i) => i[0]);
+        const axis2 = arrayOfValues.map((i) => i[1]);
+        const axis3 = arrayOfValues.map((i) => i[2]);
+        const axis4 = arrayOfValues.map((i) => i[3]);
+
+        minValueInArray.push(Math.min(...axis1));
+        minValueInArray.push(Math.min(...axis2));
+        minValueInArray.push(Math.min(...axis3));
+        minValueInArray.push(Math.min(...axis4));
+
+        maxValueInArray.push(Math.max(...axis1));
+        maxValueInArray.push(Math.max(...axis2));
+        maxValueInArray.push(Math.max(...axis3));
+        maxValueInArray.push(Math.max(...axis4));
+      }
+
+      function normaliseInputs(inputs) {
+        calculateMinMaxValues(inputs, inputsMin, inputsMax);
+
+        return inputs.map((input) => {
+          return input.map(
+            (value, i) => (value - inputsMin[i]) / (inputsMax[i] - inputsMin[i])
+          );
+        });
+      }
+
+      async function cleanupData(data) {
+        const inputs = [];
+        const outputs = [];
+
+        data.map((set) => {
+          inputs.push(set.feature);
+          outputs.push(set.label);
+        });
+
+        return {
+          inputs: normaliseInputs(inputs),
+          outputs: outputs,
+        };
+      }
+
+      // INFO BANNER
+
+      function initInfoBanner() {
+        const infoBannerEl = document.createElement("div");
+        infoBannerEl.classList.add("c8a11y-info-banner");
+        infoBannerEl.innerHTML =
+          "Please wait for video stream to load. Video stream is loading...";
+        bodyEl.appendChild(infoBannerEl);
+      }
+
+      function clearInfoBanner() {
+        document.querySelector(".c8a11y-info-banner").innerHTML = "";
+      }
+
+      function updateInfoBanner(text) {
+        bodyEl.querySelector(".c8a11y-info-banner").innerHTML = text;
+      }
+
+      function cleanupAnswerX(x) {
+        if (x > bodyEl.clientWidth) {
+          return bodyEl.clientWidth - 10;
+        } else if (x < 0) {
+          return 10;
+        }
+
+        return x;
+      }
+
+      function cleanupAnswerY(y) {
+        if (y > bodyEl.clientHeight) {
+          return bodyEl.clientHeight - 10;
+        } else if (y < 0) {
+          return 10;
+        }
+
+        return y;
+      }
+
+      async function initModelPrediction() {
+        const coordinates = await getCurrentCoordinates();
+        const distances = await calculateDistances(coordinates);
+
+        const testInput = distances.map(
+          (value, i) => (value - inputsMin[i]) / (inputsMax[i] - inputsMin[i])
+        );
+
+        const inputTensor = tf.tensor2d([testInput]);
+        const answer = model.predict(inputTensor);
+        const answerAsArray = answer.dataSync();
+
+        const xPrediction = cleanupAnswerX(answerAsArray[0]);
+        const yPrediction = cleanupAnswerY(answerAsArray[1]);
+
+        console.log("predicting iris target");
+        const predictedIrisTarget = document.createElement("div");
+        predictedIrisTarget.classList.add("c8a11y-predicted-iris-target");
+        predictedIrisTarget.style.left = `${answerAsArray[0]}px`;
+        predictedIrisTarget.style.top = `${answerAsArray[1]}px`;
+        bodyEl.appendChild(predictedIrisTarget);
+
+        // cleanup
+        answer.dispose();
+        if (shouldPredict) {
+          setTimeout(initModelPrediction, 100);
+        }
+      }
+
+      function updateToggleButtonText(text) {
+        document.querySelector(".c8a11y-predict-toggle-button").innerHTML =
+          text;
+      }
+
+      async function toggleModelPrediction() {
+        if (shouldPredict) {
+          shouldPredict = false;
+          updateToggleButtonText("Turn prediction on");
+        } else {
+          shouldPredict = true;
+          updateToggleButtonText("Turn prediction off");
+          initModelPrediction();
+        }
+      }
+
+      function initPredictToggleButton() {
+        const toggleButton = document.createElement("button");
+        toggleButton.classList.add("c8a11y-predict-toggle-button");
+        toggleButton.innerHTML = "Turn prediction off";
+        toggleButton.addEventListener("click", toggleModelPrediction);
+        bodyEl.querySelector(".c8a11y-info-banner").appendChild(toggleButton);
+      }
+
+      async function train() {
+        updateInfoBanner("Training model...");
+        const { inputs, outputs } = await cleanupData(dataSet);
+        isAlreadyTraining = true;
+
+        const xs = tf.tensor2d(inputs);
+        const ys = tf.tensor2d(outputs);
+
+        const hiddenLayer = tf.layers.dense({
+          activation: "relu",
+          inputShape: [4],
+          units: inputs.length,
+        });
+
+        const outputLayer = tf.layers.dense({
+          units: 2,
+        });
+
+        model.add(hiddenLayer);
+        model.add(outputLayer);
+
+        model.compile({
+          optimizer: tf.train.sgd(0.0001), // adam
+          loss: "meanSquaredError",
+        });
+
+        model.summary();
+
+        const printCallback = {
+          onEpochEnd: (epoch, log) => {
+            console.log(epoch, log);
+          },
+        };
+
+        // train model
+        model
+          .fit(xs, ys, {
+            epochs: 1000,
+            callbacks: printCallback,
+            batchSize: 10,
+          })
+          .then((history) => {
+            console.log("Training complete");
+            updateInfoBanner(
+              "Look around the screen to predict. You can toggle predictions on or off using the button 👉"
+            );
+            shouldPredict = true;
+            initPredictToggleButton();
+            initModelPrediction();
+          });
+      }
+
+      function initInfoModal(
+        innerHTML,
+        confirmText,
+        onConfirmation,
+        dismissText,
+        onDismissal
+      ) {
+        destroyMouseHighlighter();
+        const infoModalEl = document.createElement("div");
+        infoModalEl.classList.add("c8a11y-info-modal");
+        infoModalEl.innerHTML = innerHTML;
+        bodyEl.appendChild(infoModalEl);
+
+        if (dismissText !== undefined) {
+          const dismissButton = document.createElement("button");
+          dismissButton.classList.add("c8a11y-info-modal-button", "dismiss");
+          dismissButton.innerHTML = dismissText;
+          dismissButton.addEventListener("click", function () {
+            infoModalEl.remove();
+            onDismissal();
+          });
+
+          infoModalEl.appendChild(dismissButton);
+        }
+
+        if (confirmText !== null) {
+          const confirmButton = document.createElement("button");
+          confirmButton.classList.add("c8a11y-info-modal-button", "confirm");
+          confirmButton.innerHTML = confirmText;
+          confirmButton.addEventListener("click", function () {
+            infoModalEl.remove();
+            onConfirmation();
+          });
+
+          infoModalEl.appendChild(confirmButton);
+        }
+      }
+
+      function createDot(classes) {
+        const dotEl = document.createElement("div");
+        dotEl.classList.add(...classes);
+        overlayEl.appendChild(dotEl);
+        return dotEl;
+      }
+
+      async function addAdditionalCalibrationDots() {
+        initMouseHighlighter();
+
+        const dots = [...Array(additionalDotCountX)]
+          .map((_, xi) => {
+            return [...Array(additionalDotCountY)].map((_, yi) => {
+              return [`x${xi + 1}`, `y${yi + 1}`];
+            });
+          })
+          .flat();
+
+        dots.map((dot) => {
+          const dotEl = createDot([
+            "c8a11y-dot",
+            "c8a11y-additional-dot",
+            dot[0],
+            dot[1],
+          ]);
+
+          dotEl.addEventListener("click", async function (e) {
+            overlayEl.removeChild(e.target);
+
+            if (
+              !overlayEl.hasChildNodes() &&
+              dataSet.length >= totalDataPointsForTraining &&
+              !isAlreadyTraining
+            ) {
+              train();
+            }
+          });
+        });
+      }
+
+      async function addInitialCalibrationDots() {
+        initMouseHighlighter();
+
+        const dots = [...Array(initialDotCountX)]
+          .map((_, xi) => {
+            return [...Array(initialDotCountY)].map((_, yi) => {
+              return [`x${xi + 1}`, `y${yi + 1}`];
+            });
+          })
+          .flat();
+
+        dots.map((dot) => {
+          const dotEl = createDot([
+            "c8a11y-dot",
+            "c8a11y-initial-dot",
+            dot[0],
+            dot[1],
+          ]);
+
+          dotEl.addEventListener("click", async function (e) {
+            overlayEl.removeChild(e.target);
+
+            if (!overlayEl.hasChildNodes() && !isAlreadyTraining) {
+              initInfoModal(
+                `<p>Great! You've collected ${dataSet.length} data points. For a more accurate prediction we recommend doing one more round of data collection before training your model.</p>`,
+                "OK!",
+                addAdditionalCalibrationDots,
+                "Train model using current data set",
+                train
+              );
+            }
+          });
+        });
+      }
+
+      function initDataCollection() {
+        bodyEl.addEventListener("click", async function (e) {
+          const mousecoords = getMousePosition(e);
+          const coordinates = await getCurrentCoordinates();
+          const distances = await calculateDistances(coordinates);
+
+          dataSet.push({
+            feature: distances,
+            label: [mousecoords.x, mousecoords.y],
+          });
+        });
+      }
+
+      function initOverlay() {
+        overlayEl = document.createElement("div");
+        overlayEl.classList.add("c8a11y-overlay");
+        bodyEl.appendChild(overlayEl);
+
+        initDataCollection();
+        addInitialCalibrationDots();
+      }
+
+      async function initVideoStream() {
+        videoEl = document.createElement("video");
+        canvasEl = document.createElement("canvas");
+        const containerEl = document.createElement("div");
+
+        containerEl.classList.add("c8a11y-container");
+        canvasEl.classList.add("c8a11y-canvas");
+        videoEl.classList.add("c8a11y-video");
+
+        bodyEl.appendChild(containerEl);
+        containerEl.appendChild(canvasEl);
+        containerEl.appendChild(videoEl);
+
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: false,
           video: {
@@ -25,34 +476,20 @@ chrome.extension.sendMessage({}, function (response) {
 
         return new Promise((resolve) => {
           videoEl.onloadeddata = () => {
-            resolve(videoEl);
+            resolve();
           };
         });
       }
 
-      async function addHTMLElementsToDOM(container, canvasEl, videoEl) {
-        // Assign ids
-        container.setAttribute("id", "container");
-        canvasEl.setAttribute("id", "canvasEl");
-        videoEl.setAttribute("id", "videoEl");
-
-        // Add elements to DOM
-        document.querySelector("body").appendChild(container);
-        container.appendChild(canvasEl);
-        container.appendChild(videoEl);
+      function initCanvas(canvasEl) {
+        const ctx = canvasEl.getContext("2d");
+        ctx.translate(canvasEl.width, 0);
+        ctx.scale(-1, 1);
+        return ctx;
       }
 
-      function distance(a, b) {
-        return Math.sqrt(Math.pow(a[0] - b[0], 2) + Math.pow(a[1] - b[1], 2));
-      }
-
-      async function renderPrediction(ctx, model) {
-        const predictions = await model.estimateFaces({
-          input: videoEl,
-          returnTensors: false,
-          flipHorizontal: false,
-          predictIrises: true,
-        });
+      async function renderKeypoints(ctx, canvasEl, videoEl) {
+        const predictions = await getFacialKeypointsPrediction(videoEl);
 
         ctx.drawImage(
           videoEl,
@@ -67,108 +504,95 @@ chrome.extension.sendMessage({}, function (response) {
         );
 
         if (predictions.length > 0) {
-          predictions.forEach((prediction) => {
-            const keypoints = prediction.scaledMesh;
+          const keypoints = predictions[0].annotations;
 
-            // Draw dots
-            ctx.fillStyle = BLACK;
+          const leftEyeEdgeKeypoint = {
+            x: keypoints["leftEyeUpper0"][0][0],
+            y: keypoints["leftEyeUpper0"][0][1],
+          };
+          const rightEyeEdgeKeypoint = {
+            x: keypoints["rightEyeUpper0"][0][0],
+            y: keypoints["rightEyeUpper0"][0][1],
+          };
 
-            for (let i = 0; i < NUM_KEYPOINTS; i++) {
-              const x = keypoints[i][0];
-              const y = keypoints[i][1];
+          const a = leftEyeEdgeKeypoint.x - rightEyeEdgeKeypoint.x;
+          const b = leftEyeEdgeKeypoint.y - rightEyeEdgeKeypoint.y;
+          const distance = Math.sqrt(a * a + b * b);
 
+          // Draw "peephole" frame
+          const padding = distance * 0.2; // add 20% x-padding
+          const frameWidth = distance + padding;
+          const frameHeight = distance / 3;
+          const x = leftEyeEdgeKeypoint.x + padding / 2; // The x-coordinate of the upper-left corner
+          const y = leftEyeEdgeKeypoint.y - frameHeight / 2; // The y-coordinate of the upper-left corner
+          ctx.strokeStyle = BLACK;
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.rect(x, y, -frameWidth, frameHeight);
+          ctx.stroke();
+
+          // Draw edge points
+          ctx.fillStyle = GREEN;
+          ctx.lineWidth = 2;
+          // x1, y1
+          ctx.beginPath();
+          ctx.arc(x, leftEyeEdgeKeypoint.y, 1, 0, 2 * Math.PI);
+          ctx.fill();
+          // x2, y2
+          ctx.beginPath();
+          ctx.arc(x - frameWidth, leftEyeEdgeKeypoint.y, 1, 0, 2 * Math.PI);
+          ctx.fill();
+
+          // Draw irises
+          const irisKeypoints = ["leftEyeIris", "rightEyeIris"];
+
+          irisKeypoints.map((point) => {
+            const iris = keypoints[point];
+            ctx.fillStyle = RED;
+            ctx.lineWidth = 0.25;
+
+            iris.map((p) => {
               ctx.beginPath();
-              ctx.arc(x, y, 1 /* radius */, 0, 2 * Math.PI);
+              ctx.arc(p[0], p[1], 1 /* radius */, 0, 2 * Math.PI);
               ctx.fill();
-            }
-
-            if (keypoints.length > NUM_KEYPOINTS) {
-              ctx.strokeStyle = GREEN;
-              ctx.lineWidth = 1;
-
-              const leftCenter = keypoints[NUM_KEYPOINTS];
-              const leftDiameterY = distance(
-                keypoints[NUM_KEYPOINTS + 4],
-                keypoints[NUM_KEYPOINTS + 2]
-              );
-              const leftDiameterX = distance(
-                keypoints[NUM_KEYPOINTS + 3],
-                keypoints[NUM_KEYPOINTS + 1]
-              );
-
-              ctx.beginPath();
-              ctx.ellipse(
-                leftCenter[0],
-                leftCenter[1],
-                leftDiameterX / 2,
-                leftDiameterY / 2,
-                0,
-                0,
-                2 * Math.PI
-              );
-
-              ctx.stroke();
-
-              if (keypoints.length > NUM_KEYPOINTS + NUM_IRIS_KEYPOINTS) {
-                const rightCenter =
-                  keypoints[NUM_KEYPOINTS + NUM_IRIS_KEYPOINTS];
-                const rightDiameterY = distance(
-                  keypoints[NUM_KEYPOINTS + NUM_IRIS_KEYPOINTS + 2],
-                  keypoints[NUM_KEYPOINTS + NUM_IRIS_KEYPOINTS + 4]
-                );
-                const rightDiameterX = distance(
-                  keypoints[NUM_KEYPOINTS + NUM_IRIS_KEYPOINTS + 3],
-                  keypoints[NUM_KEYPOINTS + NUM_IRIS_KEYPOINTS + 1]
-                );
-
-                ctx.beginPath();
-                ctx.ellipse(
-                  rightCenter[0],
-                  rightCenter[1],
-                  rightDiameterX / 2,
-                  rightDiameterY / 2,
-                  0,
-                  0,
-                  2 * Math.PI
-                );
-                ctx.stroke();
-              }
-            }
+            });
           });
+
+          ctx.fill();
+
+          if (!videoStreamHasLoaded && firstLoad) {
+            firstLoad = false;
+            clearInfoBanner();
+          }
         }
 
         requestAnimationFrame(() => {
-          renderPrediction(ctx, model);
+          renderKeypoints(ctx, canvasEl, videoEl);
         });
       }
 
       async function main() {
-        const container = document.createElement("div");
-        const canvasEl = document.createElement("canvas");
-        const videoEl = document.createElement("video");
-
-        await addHTMLElementsToDOM(container, canvasEl, videoEl);
-        await setupVideoStream(videoEl);
-
-        videoEl.play();
-        videoEl.width = VIDEO_WIDTH;
-        videoEl.height = VIDEO_HEIGHT;
-        canvasEl.width = VIDEO_WIDTH;
-        canvasEl.height = VIDEO_HEIGHT;
-
-        const ctx = canvasEl.getContext("2d");
-        ctx.translate(canvasEl.width, 0);
-        ctx.scale(-1, 1);
-        ctx.fillStyle = BLACK;
-        ctx.strokeStyle = BLACK;
-        ctx.lineWidth = 0.25;
-
-        const model = await faceLandmarksDetection.load(
-          faceLandmarksDetection.SupportedPackages.mediapipeFacemesh,
-          { maxFaces: 1 }
+        initInfoBanner();
+        initInfoModal(
+          "<p>You’ve successfully activated <i>c8a11y</i>!</p><p><i>c8a11y</i> is an application that determines where you are looking in the browser, but first, the application needs to be trained. To do so, simply <ol><li>Ensure access to your camera is enabled</li><li>Click away all of the green dots on the screen</li><li>Keep looking at the red dot whilst moving the cursor around</li></ol>Ready?</p>",
+          "Let's go!",
+          initOverlay
         );
 
-        renderPrediction(ctx, model);
+        await initVideoStream();
+
+        if (videoEl && canvasEl) {
+          videoEl.play();
+          videoEl.width = VIDEO_WIDTH;
+          videoEl.height = VIDEO_HEIGHT;
+          canvasEl.width = VIDEO_WIDTH;
+          canvasEl.height = VIDEO_HEIGHT;
+
+          const ctx = initCanvas(canvasEl);
+          await renderKeypoints(ctx, canvasEl, videoEl);
+        } else {
+          // throw error
+        }
       }
 
       main();
