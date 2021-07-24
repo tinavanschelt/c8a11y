@@ -131,7 +131,7 @@ button.c8a11y-predict-toggle-button {
 .c8a11y-stream-container {
   background-color: rgb(255 255 255 / 70%);
   border-radius: var(--border-radius);
-  position: absolute;
+  position: fixed;
   top: 0;
   left: 0;
   height: var(--video-height);
