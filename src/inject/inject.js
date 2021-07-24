@@ -363,6 +363,14 @@ chrome.extension.sendMessage({}, function (response) {
         return dotEl;
       }
 
+      async function removeDot(e, dotEl) {
+        dotEl.classList.add("animate");
+
+        setTimeout(function () {
+          overlayEl.removeChild(e.target);
+        }, 300);
+      }
+
       async function addAdditionalCalibrationDots() {
         initMouseHighlighter();
 
@@ -383,7 +391,7 @@ chrome.extension.sendMessage({}, function (response) {
           ]);
 
           dotEl.addEventListener("click", async function (e) {
-            overlayEl.removeChild(e.target);
+            await removeDot(e, dotEl);
 
             if (
               !overlayEl.hasChildNodes() &&
@@ -416,7 +424,7 @@ chrome.extension.sendMessage({}, function (response) {
           ]);
 
           dotEl.addEventListener("click", async function (e) {
-            overlayEl.removeChild(e.target);
+            await removeDot(e, dotEl);
 
             if (!overlayEl.hasChildNodes() && !isAlreadyTraining) {
               initInfoModal(
