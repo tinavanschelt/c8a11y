@@ -229,11 +229,10 @@ chrome.extension.sendMessage({}, function (response) {
         const xPrediction = cleanupAnswerX(answerAsArray[0]);
         const yPrediction = cleanupAnswerY(answerAsArray[1]);
 
-        console.log("predicting iris target");
         const predictedIrisTarget = document.createElement("div");
         predictedIrisTarget.classList.add("c8a11y-predicted-iris-target");
-        predictedIrisTarget.style.left = `${answerAsArray[0]}px`;
-        predictedIrisTarget.style.top = `${answerAsArray[1]}px`;
+        predictedIrisTarget.style.left = `${xPrediction}px`;
+        predictedIrisTarget.style.top = `${yPrediction}px`;
         bodyEl.appendChild(predictedIrisTarget);
 
         // cleanup
