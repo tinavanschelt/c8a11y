@@ -12,7 +12,7 @@
    ========================================================================== */
 
 :root {
-  --color-confirm: #009688;
+  --color-confirm: #3f51b5;
   --video-width: 220px;
   --video-height: 180px;
   --initial-distance-from-edge: 0.5rem;
@@ -265,6 +265,12 @@ button.c8a11y-predict-toggle-button {
   width: 20px;
 }
 
+.c8a11y-mouse-target.inline {
+  display: inline-block;
+  margin: 0 0.25rem -0.25rem;
+  position: relative;
+}
+
 .c8a11y-container {
   background-color: #fff;
   position: absolute;
@@ -290,6 +296,12 @@ button.c8a11y-predict-toggle-button {
   position: absolute;
   height: 1.5rem;
   width: 1.5rem;
+}
+
+.c8a11y-dot.inline {
+  display: inline-block;
+  margin: 0 0.25rem -0.25rem;
+  position: relative;
 }
 
 /* INITIAL DOTS */
