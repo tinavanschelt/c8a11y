@@ -253,7 +253,7 @@ button.c8a11y-predict-toggle-button {
   position: absolute;
   top: 25%;
   width: 40%;
-  z-index: 10000;
+  z-index: 10003;
 }
 
 .c8a11y-overlay {

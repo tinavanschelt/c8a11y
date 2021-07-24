@@ -3,8 +3,8 @@ chrome.extension.sendMessage({}, function (response) {
     if (document.readyState === "complete") {
       clearInterval(readyStateCheckInterval);
 
-      let videoStreamHasLoaded = false;
       let firstLoad = true;
+      let shouldRenderOverlay = false;
       let isAlreadyTraining = false;
       let shouldPredict = true;
 
@@ -452,6 +452,11 @@ chrome.extension.sendMessage({}, function (response) {
         });
       }
 
+      function setShouldRenderOverlay(val) {
+        console.log("HIER!");
+        shouldRenderOverlay = val;
+      }
+
       function initOverlay() {
         overlayEl = document.createElement("div");
         overlayEl.classList.add("c8a11y-overlay");
@@ -570,7 +575,7 @@ chrome.extension.sendMessage({}, function (response) {
 
           ctx.fill();
 
-          if (!videoStreamHasLoaded && firstLoad) {
+          if (firstLoad) {
             firstLoad = false;
             clearInfoBanner();
           }
@@ -586,7 +591,7 @@ chrome.extension.sendMessage({}, function (response) {
         initInfoModal(
           "<p>You’ve successfully activated <i>c8a11y</i>!</p><p><i>c8a11y</i> is an application that determines where you are looking in the browser, but first, the application needs to be trained. To do so, simply <ol><li>Ensure <b>access to your camera is enabled</b></li><li>Click away all of the <div class='c8a11y-dot inline'></div> green dots on the screen</li><li>Keep looking at the <div class='c8a11y-mouse-target inline'></div> bright blue dot whilst moving the cursor around</li></ol>Ready?</p>",
           "Let's go!",
-          initOverlay
+          setShouldRenderOverlay(true)
         );
 
         await initVideoStream();
@@ -600,6 +605,9 @@ chrome.extension.sendMessage({}, function (response) {
 
           const ctx = initCanvas(canvasEl);
           await renderKeypoints(ctx, canvasEl, videoEl);
+          if (shouldRenderOverlay) {
+            initOverlay();
+          }
         } else {
           // throw error
         }
