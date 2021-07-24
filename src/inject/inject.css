@@ -231,7 +231,7 @@ button.c8a11y-predict-toggle-button {
   color: white;
   display: flex;
   justify-content: center;
-  position: absolute;
+  position: fixed;
   right: 0;
   top: 0;
   height: 0;
@@ -269,7 +269,7 @@ button.c8a11y-predict-toggle-button {
   box-shadow: 1px 1px 3px 0px rgba(0, 0, 0, 0.2);
   left: 30%;
   padding: 0.5rem 1.5rem 1rem;
-  position: absolute;
+  position: fixed;
   top: 25%;
   width: 40%;
   z-index: 10003;
