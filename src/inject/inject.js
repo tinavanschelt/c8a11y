@@ -174,21 +174,24 @@ chrome.extension.sendMessage({}, function (response) {
       }
 
       // INFO BANNER
-
       function initInfoBanner() {
         const infoBannerEl = document.createElement("div");
-        infoBannerEl.classList.add("c8a11y-info-banner");
+        infoBannerEl.classList.add("c8a11y-info-banner", "active");
         infoBannerEl.innerHTML =
           "Please wait for video stream to load. Video stream is loading...";
         bodyEl.appendChild(infoBannerEl);
       }
 
       function clearInfoBanner() {
+        document
+          .querySelector(".c8a11y-info-banner")
+          .classList.remove("active");
         document.querySelector(".c8a11y-info-banner").innerHTML = "";
       }
 
       function updateInfoBanner(text) {
-        bodyEl.querySelector(".c8a11y-info-banner").innerHTML = text;
+        document.querySelector(".c8a11y-info-banner").classList.add("active");
+        document.querySelector(".c8a11y-info-banner").innerHTML = text;
       }
 
       function cleanupAnswerX(x) {

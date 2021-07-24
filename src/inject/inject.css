@@ -12,6 +12,7 @@
    ========================================================================== */
 
 :root {
+  --color-confirm: #009688;
   --video-width: 220px;
   --video-height: 180px;
   --initial-distance-from-edge: 0.5rem;
@@ -191,9 +192,9 @@ textarea {
 button {
   all: unset;
   cursor: pointer;
-  background-color: #018073;
+  background-color: var(--color-confirm);
   border-radius: 5px;
-  box-shadow: 1px 1px 3px 0px rgba(0, 0, 0, 0.2);
+  box-shadow: 2px 2px 3px 0px rgba(0, 0, 0, 0.3);
   color: white;
   margin-right: 1rem;
   padding: 0.75rem 1.5rem;
@@ -205,7 +206,7 @@ button.dismiss {
 
 button.c8a11y-predict-toggle-button {
   background-color: white;
-  color: #018073;
+  color: var(--color-confirm);
   font-size: 0.75rem;
   font-weight: bold;
   margin: 0 1rem;
@@ -218,7 +219,7 @@ button.c8a11y-predict-toggle-button {
 
 .c8a11y-info-banner {
   align-items: center;
-  background-color: black;
+  background-color: rgb(0 0 0 / 70%);
   box-shadow: 1px 1px 3px 0px rgba(0, 0, 0, 0.2);
   color: white;
   display: flex;
@@ -226,12 +227,16 @@ button.c8a11y-predict-toggle-button {
   position: absolute;
   right: 0;
   top: 0;
-  height: 40px;
+  height: 0;
   left: 0;
 }
 
+.c8a11y-info-banner.active {
+  height: 40px;
+}
+
 .c8a11y-info-modal {
-  background-color: lightgrey;
+  background-color: white;
   border: 1px solid black;
   border-radius: 10px;
   box-shadow: 1px 1px 3px 0px rgba(0, 0, 0, 0.2);
@@ -253,8 +258,7 @@ button.c8a11y-predict-toggle-button {
 }
 
 .c8a11y-mouse-target {
-  background-color: rgba(255, 0, 0, 0.5);
-  border: 1px solid red;
+  background-color: rgb(0 188 212 / 70%);
   border-radius: 50%;
   height: 20px;
   position: absolute;
@@ -264,7 +268,7 @@ button.c8a11y-predict-toggle-button {
 .c8a11y-container {
   background-color: #fff;
   position: absolute;
-  top: 40px;
+  top: 0;
   left: 0;
   width: var(--video-width);
   height: var(--video-height);
@@ -281,15 +285,11 @@ button.c8a11y-predict-toggle-button {
 }
 
 .c8a11y-dot {
-  background-color: rgba(0, 255, 13, 0.7);
+  background-color: rgb(124 206 29 / 70%);
   border-radius: 50%;
   position: absolute;
   height: 1.5rem;
   width: 1.5rem;
-}
-
-.c8a11y-additional-dot {
-  background-color: rgba(255, 102, 0, 0.7);
 }
 
 /* INITIAL DOTS */
