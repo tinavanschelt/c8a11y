@@ -364,13 +364,14 @@ chrome.extension.sendMessage({}, function (response) {
         state.isAlreadyTraining = true;
         // Unlock scroll on body
         bodyEl.style.overflow = "auto";
-        updateInfoBanner(
-          "Training model...<div class='c8a11y-progress-bar'><div class='c8a11y-progress'></div></div>"
-        );
 
         const { inputs, outputs } = await cleanupData(dataSet);
         const { trainInputs, trainOutputs, testInputs, testOutputs } =
           await splitDataSets(inputs, outputs);
+
+        updateInfoBanner(
+          `Training model w/ ${trainInputs.length} training inputs and ${testInputs.length} testing inputs...<div class='c8a11y-progress-bar'><div class='c8a11y-progress'></div></div>`
+        );
 
         const xs = tf.tensor2d(trainInputs);
         const ys = tf.tensor2d(trainOutputs);
