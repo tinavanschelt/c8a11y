@@ -3,9 +3,7 @@ chrome.extension.sendMessage({}, function (response) {
     if (document.readyState === "complete") {
       clearInterval(readyStateCheckInterval);
 
-      /*
-        Define global application state
-      */
+      /* Define global application state */
       const state = {
         isFirstLoad: true,
         isAlreadyTraining: false,
@@ -13,26 +11,24 @@ chrome.extension.sendMessage({}, function (response) {
         shouldPredict: true,
       };
 
-      /* 
-        Define global DOM elements
-      */
+      /* Define global DOM elements */
       const bodyEl = document.querySelector("body");
       let videoEl;
       let canvasEl;
       let overlayEl;
 
-      /* 
-        Specify number of dots used for calibration
-      */
+      /* Specify number of dots used for calibration */
       const dotCount = {
         x: 6,
         y: 4,
       };
 
+      /* Define global data variables */
       const dataSet = [];
       const inputsMin = [];
       const inputsMax = [];
 
+      /* Declare constants */
       const TOTAL_EPOCHS = 800;
       const VIDEO_WIDTH = 220;
       const VIDEO_HEIGHT = 180;
@@ -40,6 +36,7 @@ chrome.extension.sendMessage({}, function (response) {
       const GREEN = "#28CF75";
       const RED = "#F44336";
 
+      /* Initialise the tensorflow model */
       const model = tf.sequential();
 
       /* SECTION: MOUSE MOVEMENT AND HIGHLIGHTING */
@@ -69,7 +66,7 @@ chrome.extension.sendMessage({}, function (response) {
         bodyEl.appendChild(mouseTarget); // Render a circle at the current mouse co-ordinates
       }
 
-      /* Initialise themouse highlighter */
+      /* Initialise the mouse highlighter */
       function initMouseHighlighter() {
         bodyEl.addEventListener("mousemove", mouseHighlighter);
       }
@@ -184,6 +181,46 @@ chrome.extension.sendMessage({}, function (response) {
           inputs: normaliseInputs(inputs),
           outputs: outputs,
         };
+      }
+
+      /* SECTION: POPUP INFO MODAL */
+
+      function initInfoModal(
+        innerHTML,
+        confirmText,
+        onConfirmation,
+        dismissText,
+        onDismissal
+      ) {
+        destroyMouseHighlighter();
+        const infoModalEl = document.createElement("div");
+        infoModalEl.classList.add("c8a11y-info-modal");
+        infoModalEl.innerHTML = innerHTML;
+        bodyEl.appendChild(infoModalEl);
+
+        if (dismissText !== undefined) {
+          const dismissButton = document.createElement("button");
+          dismissButton.classList.add("c8a11y-info-modal-button", "dismiss");
+          dismissButton.innerHTML = dismissText;
+          dismissButton.addEventListener("click", function () {
+            infoModalEl.remove();
+            onDismissal();
+          });
+
+          infoModalEl.appendChild(dismissButton);
+        }
+
+        if (confirmText !== null) {
+          const confirmButton = document.createElement("button");
+          confirmButton.classList.add("c8a11y-info-modal-button", "confirm");
+          confirmButton.innerHTML = confirmText;
+          confirmButton.addEventListener("click", function () {
+            infoModalEl.remove();
+            onConfirmation();
+          });
+
+          infoModalEl.appendChild(confirmButton);
+        }
       }
 
       /* SECTION: TOP INFO BANNER */
@@ -345,44 +382,6 @@ chrome.extension.sendMessage({}, function (response) {
           });
       }
 
-      function initInfoModal(
-        innerHTML,
-        confirmText,
-        onConfirmation,
-        dismissText,
-        onDismissal
-      ) {
-        destroyMouseHighlighter();
-        const infoModalEl = document.createElement("div");
-        infoModalEl.classList.add("c8a11y-info-modal");
-        infoModalEl.innerHTML = innerHTML;
-        bodyEl.appendChild(infoModalEl);
-
-        if (dismissText !== undefined) {
-          const dismissButton = document.createElement("button");
-          dismissButton.classList.add("c8a11y-info-modal-button", "dismiss");
-          dismissButton.innerHTML = dismissText;
-          dismissButton.addEventListener("click", function () {
-            infoModalEl.remove();
-            onDismissal();
-          });
-
-          infoModalEl.appendChild(dismissButton);
-        }
-
-        if (confirmText !== null) {
-          const confirmButton = document.createElement("button");
-          confirmButton.classList.add("c8a11y-info-modal-button", "confirm");
-          confirmButton.innerHTML = confirmText;
-          confirmButton.addEventListener("click", function () {
-            infoModalEl.remove();
-            onConfirmation();
-          });
-
-          infoModalEl.appendChild(confirmButton);
-        }
-      }
-
       /* SECTION: SETUP CALIBRATION */
 
       /* Initialise dots by creating an array of x and y classnames based on the number of dots required */
@@ -413,7 +412,7 @@ chrome.extension.sendMessage({}, function (response) {
         }, 300);
       }
 
-      /* Calibration is complete once all of the dots have been removed from the DOM. 
+      /* Calibration is complete once all of the dots have been removed from the DOM.
        * Check if the model isn't already training and if not, call the specified function */
       function checkIfCalibrationComplete(onCalibrationCompletion) {
         setTimeout(function () {
@@ -476,9 +475,7 @@ chrome.extension.sendMessage({}, function (response) {
         });
       }
 
-      function setShouldRenderOverlay(val) {
-        state.shouldRenderOverlay = val;
-      }
+      /* SECTION: ADD KEY ELEMENTS TO THE DOM */
 
       function initOverlay() {
         overlayEl = document.createElement("div");
@@ -530,6 +527,8 @@ chrome.extension.sendMessage({}, function (response) {
         ctx.scale(-1, 1);
         return ctx;
       }
+
+      /* SECTION: DRAW FACIAL LANDMARKS ON THE CANVAS / VIDEO */
 
       async function renderKeypoints(ctx, canvasEl, videoEl) {
         const predictions = await getFacialKeypointsPrediction(videoEl);
@@ -614,13 +613,15 @@ chrome.extension.sendMessage({}, function (response) {
         });
       }
 
+      /* SECTION: MAIN */
+
       async function main() {
         initInfoBanner();
         initInfoModal(
           "<p>You’ve successfully activated <i>c8a11y</i>!</p><p><i>c8a11y</i> is an application that determines where you are looking in the browser, but first, the application needs to be trained. To do so, simply </p><ol><li>Ensure <b>access to your camera is enabled</b></li><li>Click away all of the <div class='c8a11y-dot inline'></div> green dots on the screen</li><li>Keep looking at the <div class='c8a11y-mouse-target inline'></div> bright blue dot whilst moving the cursor around</li></ol><p>Though not essential, the bright blue rectangle can be used as a guide for positioning your head and might result in more accurate results.</p><p><i>Ready?</i>",
           "Let's go!",
           () => {
-            setShouldRenderOverlay(true);
+            state.shouldRenderOverlay = true;
           }
         );
 
