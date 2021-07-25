@@ -306,6 +306,7 @@ chrome.extension.sendMessage({}, function (response) {
           const output = model.predict(inputTensor);
           const outputAsArray = output.dataSync();
 
+          inputTensor.dispose();
           output.dispose();
 
           return {
@@ -499,7 +500,12 @@ chrome.extension.sendMessage({}, function (response) {
           const xs = tf.tensor2d(testInputs);
           const ys = tf.tensor2d(testOutputs);
 
-          const result = model.evaluate(xs, ys); // Evaluate the model using test data
+          const result = await model.evaluate(xs, ys); // Evaluate the model using test data
+
+          // Cleanup tensors
+          xs.dispose();
+          ys.dispose();
+
           console.log("Model evaluation");
           result.print(); // Print the evaluation result to the browser console
         });
@@ -563,6 +569,10 @@ chrome.extension.sendMessage({}, function (response) {
             console.log("Model history", history);
           });
 
+        // Cleanup tensors
+        xs.dispose();
+        ys.dispose();
+
         updateInfoBanner(
           "Look around the screen to predict. You can toggle predictions on or off using the button 👉" // Update user instructions
         );
@@ -571,10 +581,6 @@ chrome.extension.sendMessage({}, function (response) {
         initToggleButtons(); // Add buttons to the info banner to toggle prediction and test modes
         initTestMode(); // Setup test mode
         initPredictMode(); // Turn on predict mode by default
-
-        // Cleanup tensors
-        xs.dispose();
-        ys.dispose();
       }
 
       /* SECTION: SETUP CALIBRATION */
