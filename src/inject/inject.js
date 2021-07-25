@@ -500,6 +500,7 @@ chrome.extension.sendMessage({}, function (response) {
           const ys = tf.tensor2d(testOutputs);
 
           const result = model.evaluate(xs, ys); // Evaluate the model using test data
+          console.log("Model evaluation");
           result.print(); // Print the evaluation result to the browser console
         });
       }
@@ -548,7 +549,6 @@ chrome.extension.sendMessage({}, function (response) {
         const printCallback = {
           onEpochEnd: (epoch, log) => {
             updateProgress((epoch / TOTAL_EPOCHS) * 100); // Use current epoch value to determine how much training has done (as a percentage value)
-            console.log(epoch, log); // View losses in the browser console
           },
         };
 
@@ -567,7 +567,6 @@ chrome.extension.sendMessage({}, function (response) {
           "Look around the screen to predict. You can toggle predictions on or off using the button 👉" // Update user instructions
         );
         state.isPredictMode = true;
-        // Evaluate model
         evaluate(testInputs, testOutputs); // Evaluate the now trained model with the test dataset
         initToggleButtons(); // Add buttons to the info banner to toggle prediction and test modes
         initTestMode(); // Setup test mode
