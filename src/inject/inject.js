@@ -3,10 +3,15 @@ chrome.extension.sendMessage({}, function (response) {
     if (document.readyState === "complete") {
       clearInterval(readyStateCheckInterval);
 
-      let firstLoad = true;
-      let shouldRenderOverlay = false;
-      let isAlreadyTraining = false;
-      let shouldPredict = true;
+      /*
+        Global application state
+      */
+      const state = {
+        isFirstLoad: true,
+        isAlreadyTraining: false,
+        shouldRenderOverlay: false,
+        shouldPredict: true,
+      }
 
       const bodyEl = document.querySelector("body");
       let videoEl;
@@ -236,7 +241,7 @@ chrome.extension.sendMessage({}, function (response) {
         // cleanup
         answer.dispose();
         tf.dispose();
-        if (shouldPredict) {
+        if (state.shouldPredict) {
           setTimeout(initModelPrediction, 50);
         }
       }
@@ -247,11 +252,11 @@ chrome.extension.sendMessage({}, function (response) {
       }
 
       async function toggleModelPrediction() {
-        if (shouldPredict) {
-          shouldPredict = false;
+        if (state.shouldPredict) {
+          state.shouldPredict = false;
           updateToggleButtonText("Turn prediction on");
         } else {
-          shouldPredict = true;
+          state.shouldPredict = true;
           updateToggleButtonText("Turn prediction off");
           initModelPrediction();
         }
@@ -276,7 +281,7 @@ chrome.extension.sendMessage({}, function (response) {
           "Training model...<div class='c8a11y-progress-bar'><div class='c8a11y-progress'></div></div>"
         );
         const { inputs, outputs } = await cleanupData(dataSet);
-        isAlreadyTraining = true;
+        state.isAlreadyTraining = true;
 
         const xs = tf.tensor2d(inputs);
         const ys = tf.tensor2d(outputs);
@@ -320,7 +325,7 @@ chrome.extension.sendMessage({}, function (response) {
             updateInfoBanner(
               "Look around the screen to predict. You can toggle predictions on or off using the button 👉"
             );
-            shouldPredict = true;
+            state.shouldPredict = true;
             initPredictToggleButton();
             initModelPrediction();
           });
@@ -405,7 +410,7 @@ chrome.extension.sendMessage({}, function (response) {
               if (
                 !overlayEl.hasChildNodes() &&
                 dataSet.length >= totalDataPointsForTraining &&
-                !isAlreadyTraining
+                !state.isAlreadyTraining
               ) {
                 train();
               }
@@ -437,7 +442,7 @@ chrome.extension.sendMessage({}, function (response) {
             removeDot(e, dotEl);
 
             setTimeout(function () {
-              if (!overlayEl.hasChildNodes() && !isAlreadyTraining) {
+              if (!overlayEl.hasChildNodes() && !state.isAlreadyTraining) {
                 initInfoModal(
                   `<p>Great! You've collected ${dataSet.length} data points. For a more accurate prediction we recommend doing one more round of data collection before training your model.</p>`,
                   "OK!",
@@ -465,7 +470,7 @@ chrome.extension.sendMessage({}, function (response) {
       }
 
       function setShouldRenderOverlay(val) {
-        shouldRenderOverlay = val;
+        state.shouldRenderOverlay = val;
       }
 
       function initOverlay() {
@@ -591,8 +596,8 @@ chrome.extension.sendMessage({}, function (response) {
 
           ctx.fill();
 
-          if (firstLoad) {
-            firstLoad = false;
+          if (state.isFirstLoad) {
+            state.isFirstLoad = false;
             clearInfoBanner();
           }
         }
@@ -621,7 +626,7 @@ chrome.extension.sendMessage({}, function (response) {
 
           const ctx = initCanvas(canvasEl);
           await renderKeypoints(ctx, canvasEl, videoEl);
-          if (shouldRenderOverlay) {
+          if (state.shouldRenderOverlay) {
             initOverlay();
           }
         } else {
