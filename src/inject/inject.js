@@ -42,12 +42,14 @@ chrome.extension.sendMessage({}, function (response) {
 
       const model = tf.sequential();
 
-      // MOUSE MOVEMENT + HIGHLIGHTER
+      /* SECTION: MOUSE MOVEMENT AND HIGHLIGHTING */
 
+      /* Get the current co-ordinates of the cursor */
       function getMousePosition(e) {
         return { x: e.clientX, y: e.clientY };
       }
 
+      /* Clear (or reset) the existing mouse position */
       function resetMouseHighlighter() {
         const prevTarget = document.querySelector(".c8a11y-mouse-target");
 
@@ -56,26 +58,29 @@ chrome.extension.sendMessage({}, function (response) {
         }
       }
 
+      /* Highlight the mouse by rendering a div (circular) at the current position of the mouse on the screen */
       function mouseHighlighter(e) {
-        resetMouseHighlighter();
+        resetMouseHighlighter(); // Always clear the existing position first
         const mouseCoords = getMousePosition(e);
         const mouseTarget = document.createElement("div");
         mouseTarget.classList.add("c8a11y-mouse-target");
         mouseTarget.style.left = `${mouseCoords.x - 12}px`;
         mouseTarget.style.top = `${mouseCoords.y - 12}px`;
-        bodyEl.appendChild(mouseTarget);
+        bodyEl.appendChild(mouseTarget); // Render a circle at the current mouse co-ordinates
       }
 
+      /* Initialise themouse highlighter */
       function initMouseHighlighter() {
         bodyEl.addEventListener("mousemove", mouseHighlighter);
       }
 
+      /* Disable mouse highlighter */
       function destroyMouseHighlighter() {
         resetMouseHighlighter();
         bodyEl.removeEventListener("mousemove", mouseHighlighter);
       }
 
-      // CALCULATIONS
+      /* SECTION: CALCULATIONS */
 
       function distance(a, b) {
         return Math.sqrt(Math.pow(a[0] - b[0], 2) + Math.pow(a[1] - b[1], 2));
@@ -133,6 +138,8 @@ chrome.extension.sendMessage({}, function (response) {
         ];
       }
 
+      /* SECTION: DATA NORMALISATION */
+
       function calculateMinMaxValues(
         arrayOfValues,
         minValueInArray,
@@ -179,7 +186,8 @@ chrome.extension.sendMessage({}, function (response) {
         };
       }
 
-      // INFO BANNER
+      /* SECTION: TOP INFO BANNER */
+
       function initInfoBanner() {
         const infoBannerEl = document.createElement("div");
         infoBannerEl.classList.add("c8a11y-info-banner", "active");
@@ -199,6 +207,8 @@ chrome.extension.sendMessage({}, function (response) {
         document.querySelector(".c8a11y-info-banner").classList.add("active");
         document.querySelector(".c8a11y-info-banner").innerHTML = text;
       }
+
+      /* SECTION: PREDICTION */
 
       function cleanupAnswerX(x) {
         if (x > bodyEl.clientWidth) {
@@ -276,6 +286,8 @@ chrome.extension.sendMessage({}, function (response) {
           ".c8a11y-progress"
         ).style.width = `${progressAsPercentage}%`;
       }
+
+      /* SECTION: TRAIN THE TENSORFLOW MODEL */
 
       async function train() {
         // Unlock scroll on body
@@ -371,11 +383,9 @@ chrome.extension.sendMessage({}, function (response) {
         }
       }
 
-      /* SECTION: ADD CALIBRATION DOTS TO THE DOM */
+      /* SECTION: SETUP CALIBRATION */
 
-      /* 
-       *  Initialise dots by creating an array of x and y classnames based on the number of dots required
-       */
+      /* Initialise dots by creating an array of x and y classnames based on the number of dots required */
       function initDots() {
         return [...Array(dotCount.x)]
           .map((_, xi) => {
@@ -386,9 +396,7 @@ chrome.extension.sendMessage({}, function (response) {
           .flat();
       }
 
-      /* 
-       *  Create a single dot DOM element with the approriate class names and append it to the overlay
-       */
+      /* Create a single dot DOM element with the approriate class names and append it to the overlay */
       function createDot(dot, className) {
         const dotEl = document.createElement("div");
         dotEl.classList.add(...["c8a11y-dot", dot[0], dot[1]], ...[className]);
@@ -396,9 +404,7 @@ chrome.extension.sendMessage({}, function (response) {
         return dotEl;
       }
 
-      /* 
-       *  Remove a dot from the DOM
-       */
+      /* Remove a dot from the DOM */
       function removeDot(e, dotEl) {
         dotEl.classList.add("animate");
 
@@ -407,10 +413,8 @@ chrome.extension.sendMessage({}, function (response) {
         }, 300);
       }
 
-      /* 
-       *  Calibration is complete once all of the dots have been removed from the DOM. 
-       *  Check if the model isn't already training and if not, call the specified function
-       */
+      /* Calibration is complete once all of the dots have been removed from the DOM. 
+       * Check if the model isn't already training and if not, call the specified function */
       function checkIfCalibrationComplete(onCalibrationCompletion) {
         setTimeout(function () {
           if (!overlayEl.hasChildNodes() && !state.isAlreadyTraining) {
@@ -419,9 +423,7 @@ chrome.extension.sendMessage({}, function (response) {
         }, 500);
       }
 
-      /* 
-       *  Add more calibration dots if prompted
-       */
+      /* Add more calibration dots if prompted */
       async function addAdditionalCalibrationDots() {
         initMouseHighlighter();
 
@@ -439,9 +441,7 @@ chrome.extension.sendMessage({}, function (response) {
         });
       }
 
-      /* 
-       *  Add calibration dots as child nodes of the overlay element
-       */
+      /* Add calibration dots as child nodes of the overlay element */
       async function addInitialCalibrationDots() {
         initMouseHighlighter();
 
