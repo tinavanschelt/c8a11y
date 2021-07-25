@@ -201,7 +201,7 @@ chrome.extension.sendMessage({}, function (response) {
           testOutputs.push(outputs[i]);
           inputs[i] = null;
           outputs[i] = null;
-        })
+        });
 
         const trainInputs = inputs.filter((val) => val !== null);
         const trainOutputs = outputs.filter((val) => val !== null);
@@ -273,7 +273,7 @@ chrome.extension.sendMessage({}, function (response) {
 
       /* SECTION: PREDICTION */
 
-      function cleanupAnswerX(x) {
+      function cleanupOutputX(x) {
         if (x > bodyEl.clientWidth) {
           return bodyEl.clientWidth - 10;
         } else if (x < 0) {
@@ -283,7 +283,7 @@ chrome.extension.sendMessage({}, function (response) {
         return x;
       }
 
-      function cleanupAnswerY(y) {
+      function cleanupOutputY(y) {
         if (y < 0) {
           return 10;
         }
@@ -295,16 +295,16 @@ chrome.extension.sendMessage({}, function (response) {
         const coordinates = await getCurrentCoordinates();
         const distances = await calculateDistances(coordinates);
 
-        const testInput = distances.map(
+        const input = distances.map(
           (value, i) => (value - inputsMin[i]) / (inputsMax[i] - inputsMin[i])
         );
 
-        const inputTensor = tf.tensor2d([testInput]);
-        const answer = model.predict(inputTensor);
-        const answerAsArray = answer.dataSync();
+        const inputTensor = tf.tensor2d([input]);
+        const output = model.predict(inputTensor);
+        const outputAsArray = output.dataSync();
 
-        const xPrediction = cleanupAnswerX(answerAsArray[0]);
-        const yPrediction = cleanupAnswerY(answerAsArray[1]);
+        const xPrediction = cleanupOutputX(outputAsArray[0]);
+        const yPrediction = cleanupOutputY(outputAsArray[1]);
 
         const predictedIrisTarget = document.createElement("div");
         predictedIrisTarget.classList.add("c8a11y-predicted-iris-target");
@@ -313,7 +313,7 @@ chrome.extension.sendMessage({}, function (response) {
         overlayEl.appendChild(predictedIrisTarget);
 
         // cleanup
-        answer.dispose();
+        output.dispose();
         tf.dispose();
         if (state.shouldPredict) {
           setTimeout(initModelPrediction, 50);
@@ -344,6 +344,7 @@ chrome.extension.sendMessage({}, function (response) {
         bodyEl.querySelector(".c8a11y-info-banner").appendChild(toggleButton);
       }
 
+      /* Update the progress bar whilst the model is training */
       function updateProgress(progressAsPercentage) {
         bodyEl.querySelector(
           ".c8a11y-progress"
@@ -356,26 +357,28 @@ chrome.extension.sendMessage({}, function (response) {
         const xs = tf.tensor2d(testInputs);
         const ys = tf.tensor2d(testOutputs);
 
-        const result = model.evaluate(xs, ys);
-        result.print();
+        const result = model.evaluate(xs, ys); // Evaluate the model using test data
+        result.print(); // Print the evaluation result to the browser console
       }
 
       async function train() {
-        state.isAlreadyTraining = true;
-        // Unlock scroll on body
-        bodyEl.style.overflow = "auto";
+        state.isAlreadyTraining = true; // Update isAlreadyTraining state
+        bodyEl.style.overflow = "auto"; // Unlock scroll on body
 
         const { inputs, outputs } = await cleanupData(dataSet);
         const { trainInputs, trainOutputs, testInputs, testOutputs } =
           await splitDataSets(inputs, outputs);
 
+        // Update the info banner with the size of each training set and a progress bar
         updateInfoBanner(
           `Training model w/ ${trainInputs.length} training inputs and ${testInputs.length} testing inputs...<div class='c8a11y-progress-bar'><div class='c8a11y-progress'></div></div>`
         );
 
+        // Create tensors from traning data
         const xs = tf.tensor2d(trainInputs);
         const ys = tf.tensor2d(trainOutputs);
 
+        // Define model two model layers, hidden and output
         const hiddenLayer = tf.layers.dense({
           activation: "relu",
           inputShape: [4],
@@ -386,37 +389,41 @@ chrome.extension.sendMessage({}, function (response) {
           units: 2,
         });
 
+        // Add layers to the model
         model.add(hiddenLayer);
         model.add(outputLayer);
 
+        // Compile model
         model.compile({
           optimizer: tf.train.sgd(0.0001), // adam
           loss: "meanSquaredError",
         });
 
+        // Print a summary of the compiled model in the browser console
         model.summary();
 
         const printCallback = {
           onEpochEnd: (epoch, log) => {
-            updateProgress((epoch / TOTAL_EPOCHS) * 100);
-            // console.log(epoch, log);
+            updateProgress((epoch / TOTAL_EPOCHS) * 100); // Use current epoch value to determine how much training has done (as a percentage value)
+            console.log(epoch, log); // View losses in the browser console
           },
         };
 
-        // Train model
+        // Train the TS model
         model
           .fit(xs, ys, {
             epochs: TOTAL_EPOCHS,
-            callbacks: printCallback,
+            callbacks: printCallback, // printCallback() is called after each tensor is passed into the model and provides an overview of the training process (and losses)
             batchSize: 10,
           })
           .then((history) => {
+            console.log(history);
             updateInfoBanner(
-              "Look around the screen to predict. You can toggle predictions on or off using the button 👉"
+              "Look around the screen to predict. You can toggle predictions on or off using the button 👉" // Update user instructions
             );
             state.shouldPredict = true;
             // Evaluate model
-            evaluate(testInputs, testOutputs);
+            evaluate(testInputs, testOutputs); // Evaluate the now trained model with the test dataset
             initPredictToggleButton();
             initModelPrediction();
           });
