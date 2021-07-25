@@ -40,17 +40,10 @@ button.dismiss {
   margin-right: 1rem;
 }
 
-button.c8a11y-predict-toggle-button {
-  background-color: white;
-  color: var(--color-confirm);
-  font-size: 0.75rem;
-  font-weight: bold;
-  margin: 0 1rem;
-  padding: 0.5rem 0.75rem;
-  position: absolute;
-  right: 0;
-  top: 0.25rem;
-  z-index: 10001;
+.c8a11y-toggle-button {
+  font-size: 0.9rem;
+  margin: 0.5rem;
+  padding: 0.5rem 1rem;
 }
 
 .c8a11y-info-banner {
@@ -59,17 +52,21 @@ button.c8a11y-predict-toggle-button {
   box-shadow: 1px 1px 3px 0px rgba(0, 0, 0, 0.2);
   color: white;
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   position: fixed;
   right: 0;
   top: 0;
-  height: 0;
+  max-height: 0;
+  padding: 0 1rem;
   left: 0;
   z-index: 10003;
+  transition: max-height 0.25s ease-in-out;
 }
 
 .c8a11y-info-banner.active {
-  height: 40px;
+  min-height: 40px;
+  max-height: 100px;
+  transition: max-height 0.25s ease-in-out;
 }
 
 .c8a11y-progress-bar {
@@ -111,6 +108,26 @@ button.c8a11y-predict-toggle-button {
   top: 0;
   right: 0;
   z-index: 10002;
+}
+
+.c8a11y-test-mode-overlay {
+  bottom: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  left: 0;
+  position: fixed;
+  top: 0;
+  right: 0;
+  visibility: hidden;
+  z-index: 10002;
+}
+
+.c8a11y-test-block {
+  border: 1px solid var(--color-confirm);
+}
+
+.c8a11y-test-block.active {
+  background-color: rgb(63 81 181 / 50%);
 }
 
 .c8a11y-mouse-target {

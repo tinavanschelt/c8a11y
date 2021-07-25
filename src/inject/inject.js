@@ -8,7 +8,8 @@ chrome.extension.sendMessage({}, function (response) {
         isFirstLoad: true,
         isAlreadyTraining: false,
         shouldRenderOverlay: false,
-        shouldPredict: true,
+        isPredictMode: true,
+        isTestMode: false,
       };
 
       /* Define global DOM elements */
@@ -16,6 +17,7 @@ chrome.extension.sendMessage({}, function (response) {
       let videoEl;
       let canvasEl;
       let overlayEl;
+      let testModeOverlayEl;
 
       /* Specify number of dots used for calibration */
       const dotCount = {
@@ -271,7 +273,7 @@ chrome.extension.sendMessage({}, function (response) {
         document.querySelector(".c8a11y-info-banner").innerHTML = text;
       }
 
-      /* SECTION: PREDICTION */
+      /* SECTION: PREDICTION MODE */
 
       function cleanupOutputX(x) {
         if (x > bodyEl.clientWidth) {
@@ -291,7 +293,7 @@ chrome.extension.sendMessage({}, function (response) {
         return y;
       }
 
-      async function initModelPrediction() {
+      async function getCurrentGazePrediction() {
         const coordinates = await getCurrentCoordinates();
         const distances = await calculateDistances(coordinates);
 
@@ -299,12 +301,24 @@ chrome.extension.sendMessage({}, function (response) {
           (value, i) => (value - inputsMin[i]) / (inputsMax[i] - inputsMin[i])
         );
 
-        const inputTensor = tf.tensor2d([input]);
-        const output = model.predict(inputTensor);
-        const outputAsArray = output.dataSync();
+        const { xPrediction, yPrediction } = tf.tidy(() => {
+          const inputTensor = tf.tensor2d([input]);
+          const output = model.predict(inputTensor);
+          const outputAsArray = output.dataSync();
 
-        const xPrediction = cleanupOutputX(outputAsArray[0]);
-        const yPrediction = cleanupOutputY(outputAsArray[1]);
+          output.dispose();
+
+          return {
+            xPrediction: cleanupOutputX(outputAsArray[0]),
+            yPrediction: cleanupOutputY(outputAsArray[1]),
+          };
+        });
+
+        return { xPrediction, yPrediction };
+      }
+
+      async function initPredictMode() {
+        const { xPrediction, yPrediction } = await getCurrentGazePrediction();
 
         const predictedIrisTarget = document.createElement("div");
         predictedIrisTarget.classList.add("c8a11y-predicted-iris-target");
@@ -312,36 +326,163 @@ chrome.extension.sendMessage({}, function (response) {
         predictedIrisTarget.style.top = `${yPrediction}px`;
         overlayEl.appendChild(predictedIrisTarget);
 
-        // cleanup
-        output.dispose();
-        tf.dispose();
-        if (state.shouldPredict) {
-          setTimeout(initModelPrediction, 50);
+        if (state.isPredictMode) {
+          setTimeout(initPredictMode, 50);
         }
       }
 
-      function updateToggleButtonText(text) {
+      /* SECTION: TEST MODE */
+
+      /* Clear (or reset) the existing highlighted test block */
+      function resetTestBlock() {
+        const prevTestBlock = testModeOverlayEl.querySelector(".active");
+
+        if (prevTestBlock) {
+          prevTestBlock.classList.remove("active");
+        }
+      }
+
+      async function highlightTestBlock() {
+        const { xPrediction, yPrediction } = await getCurrentGazePrediction();
+
+        const blockWidth =
+          testModeOverlayEl.querySelector(".c8a11y-test-block").offsetWidth;
+        const blockHeight =
+          testModeOverlayEl.querySelector(".c8a11y-test-block").offsetHeight;
+
+        let xBlock = 0;
+        let yBlock = 0;
+
+        for (let i = 1; i < 5; i++) {
+          if (xPrediction < blockWidth * i) {
+            xBlock = i;
+            break;
+          }
+        }
+
+        for (let i = 1; i < 5; i++) {
+          if (yPrediction < blockHeight * i) {
+            yBlock = i;
+            break;
+          }
+        }
+
+        if (xBlock !== 0 && yBlock !== 0) {
+          resetTestBlock();
+          const activeBlock = testModeOverlayEl.querySelector(
+            `.c8a11y-test-block-x${xBlock}-y${yBlock}`
+          );
+          activeBlock.classList.add("active");
+        }
+
+        if (state.isTestMode) {
+          setTimeout(highlightTestBlock, 50);
+        }
+      }
+
+      async function initTestMode() {
+        testModeOverlayEl = document.createElement("div");
+        testModeOverlayEl.classList.add("c8a11y-test-mode-overlay");
+        // Render 4 x 4 grid
+        const testGrid = [...Array(4)]
+          .map((_, yi) => {
+            return [...Array(4)].map((_, xi) => {
+              return [`x${xi + 1}`, `y${yi + 1}`];
+            });
+          })
+          .flat();
+
+        testGrid.map((block) => {
+          const blockEl = document.createElement("div");
+          blockEl.classList.add(
+            "c8a11y-test-block",
+            `c8a11y-test-block-${block[0]}-${block[1]}`
+          );
+          testModeOverlayEl.appendChild(blockEl);
+        });
+
+        bodyEl.appendChild(testModeOverlayEl);
+
+        if (state.isTestMode) {
+          highlightTestBlock();
+        }
+      }
+
+      /* SECTION: MODE TOGGLE BUTTONS */
+
+      function updatePredictButtonText(text) {
         document.querySelector(".c8a11y-predict-toggle-button").innerHTML =
           text;
       }
 
-      async function toggleModelPrediction() {
-        if (state.shouldPredict) {
-          state.shouldPredict = false;
-          updateToggleButtonText("Turn prediction on");
+      function updateTestModeButtonText(text) {
+        document.querySelector(".c8a11y-test-mode-toggle-button").innerHTML =
+          text;
+      }
+
+      async function togglePredictMode() {
+        if (state.isPredictMode) {
+          // Toggle predict mode off
+          state.isPredictMode = false;
+          updatePredictButtonText("Turn predict mode on");
+          overlayEl.style.visibility = "hidden"; // Hide predictions
         } else {
-          state.shouldPredict = true;
-          updateToggleButtonText("Turn prediction off");
-          initModelPrediction();
+          // First turn off test mode
+          if (state.isTestMode) {
+            toggleTestMode();
+          }
+
+          // Toggle predict mode on
+          state.isPredictMode = true;
+          updatePredictButtonText("Turn predict mode off");
+          overlayEl.style.visibility = "visible"; // Show predictions
+          initPredictMode();
         }
       }
 
-      function initPredictToggleButton() {
-        const toggleButton = document.createElement("button");
-        toggleButton.classList.add("c8a11y-predict-toggle-button");
-        toggleButton.innerHTML = "Turn prediction off";
-        toggleButton.addEventListener("click", toggleModelPrediction);
-        bodyEl.querySelector(".c8a11y-info-banner").appendChild(toggleButton);
+      async function toggleTestMode() {
+        if (state.isTestMode) {
+          // Toggle test mode off
+          state.isTestMode = false;
+          updateTestModeButtonText("Turn test mode on");
+          testModeOverlayEl.style.visibility = "hidden"; // Hide test mode
+        } else {
+          // First turn off and reset predict mode
+          if (state.isPredictMode) {
+            togglePredictMode();
+          }
+
+          // Then toggle test mode on
+          state.isTestMode = true;
+          updateTestModeButtonText("Turn test mode off");
+          testModeOverlayEl.style.visibility = "visible"; // Show test mode
+          highlightTestBlock();
+        }
+      }
+
+      function initToggleButtons() {
+        const togglePredictButton = document.createElement("button");
+        togglePredictButton.classList.add(
+          "c8a11y-toggle-button",
+          "c8a11y-predict-toggle-button"
+        );
+        togglePredictButton.innerHTML = "Turn predict mode off"; // Predict mode on by default
+        togglePredictButton.addEventListener("click", togglePredictMode);
+
+        const toggleTestModeButton = document.createElement("button");
+        toggleTestModeButton.classList.add(
+          "c8a11y-toggle-button",
+          "c8a11y-test-mode-toggle-button"
+        );
+        toggleTestModeButton.innerHTML = "Turn test mode on"; // Test mode off by default
+        toggleTestModeButton.addEventListener("click", toggleTestMode);
+
+        const toggleButtons = document.createElement("div");
+        toggleButtons.classList.add("c8a11y-toggle-buttons");
+        toggleButtons.appendChild(togglePredictButton);
+        toggleButtons.appendChild(toggleTestModeButton);
+
+        bodyEl.querySelector(".c8a11y-info-banner").appendChild(toggleButtons);
       }
 
       /* Update the progress bar whilst the model is training */
@@ -354,11 +495,13 @@ chrome.extension.sendMessage({}, function (response) {
       /* SECTION: TRAIN AND EVALUATE THE TENSORFLOW MODEL */
 
       async function evaluate(testInputs, testOutputs) {
-        const xs = tf.tensor2d(testInputs);
-        const ys = tf.tensor2d(testOutputs);
+        tf.tidy(() => {
+          const xs = tf.tensor2d(testInputs);
+          const ys = tf.tensor2d(testOutputs);
 
-        const result = model.evaluate(xs, ys); // Evaluate the model using test data
-        result.print(); // Print the evaluation result to the browser console
+          const result = model.evaluate(xs, ys); // Evaluate the model using test data
+          result.print(); // Print the evaluation result to the browser console
+        });
       }
 
       async function train() {
@@ -410,23 +553,29 @@ chrome.extension.sendMessage({}, function (response) {
         };
 
         // Train the TS model
-        model
+        await model
           .fit(xs, ys, {
             epochs: TOTAL_EPOCHS,
             callbacks: printCallback, // printCallback() is called after each tensor is passed into the model and provides an overview of the training process (and losses)
             batchSize: 10,
           })
           .then((history) => {
-            console.log(history);
-            updateInfoBanner(
-              "Look around the screen to predict. You can toggle predictions on or off using the button 👉" // Update user instructions
-            );
-            state.shouldPredict = true;
-            // Evaluate model
-            evaluate(testInputs, testOutputs); // Evaluate the now trained model with the test dataset
-            initPredictToggleButton();
-            initModelPrediction();
+            console.log("Model history", history);
           });
+
+        updateInfoBanner(
+          "Look around the screen to predict. You can toggle predictions on or off using the button 👉" // Update user instructions
+        );
+        state.isPredictMode = true;
+        // Evaluate model
+        evaluate(testInputs, testOutputs); // Evaluate the now trained model with the test dataset
+        initToggleButtons(); // Add buttons to the info banner to toggle prediction and test modes
+        initTestMode(); // Setup test mode
+        initPredictMode(); // Turn on predict mode by default
+
+        // Cleanup tensors
+        xs.dispose();
+        ys.dispose();
       }
 
       /* SECTION: SETUP CALIBRATION */
