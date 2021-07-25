@@ -11,7 +11,7 @@ chrome.extension.sendMessage({}, function (response) {
         isAlreadyTraining: false,
         shouldRenderOverlay: false,
         shouldPredict: true,
-      }
+      };
 
       /* 
         Define global DOM elements
@@ -27,7 +27,7 @@ chrome.extension.sendMessage({}, function (response) {
       const dotCount = {
         x: 6,
         y: 4,
-      }
+      };
 
       const dataSet = [];
       const inputsMin = [];
@@ -272,12 +272,14 @@ chrome.extension.sendMessage({}, function (response) {
       }
 
       function updateProgress(progressAsPercentage) {
-        bodyEl.querySelector(".c8a11y-progress").style.width = `${progressAsPercentage}%`;  
+        bodyEl.querySelector(
+          ".c8a11y-progress"
+        ).style.width = `${progressAsPercentage}%`;
       }
 
       async function train() {
         // Unlock scroll on body
-        bodyEl.style.overflow = 'auto';
+        bodyEl.style.overflow = "auto";
         updateInfoBanner(
           "Training model...<div class='c8a11y-progress-bar'><div class='c8a11y-progress'></div></div>"
         );
@@ -309,7 +311,7 @@ chrome.extension.sendMessage({}, function (response) {
 
         const printCallback = {
           onEpochEnd: (epoch, log) => {
-            updateProgress(epoch / TOTAL_EPOCHS * 100);
+            updateProgress((epoch / TOTAL_EPOCHS) * 100);
             // console.log(epoch, log);
           },
         };
@@ -322,7 +324,6 @@ chrome.extension.sendMessage({}, function (response) {
             batchSize: 10,
           })
           .then((history) => {
-            console.log("Training complete!");
             updateInfoBanner(
               "Look around the screen to predict. You can toggle predictions on or off using the button 👉"
             );
@@ -370,6 +371,11 @@ chrome.extension.sendMessage({}, function (response) {
         }
       }
 
+      /* SECTION: ADD CALIBRATION DOTS TO THE DOM */
+
+      /* 
+       *  Initialise dots by creating an array of x and y classnames based on the number of dots required
+       */
       function initDots() {
         return [...Array(dotCount.x)]
           .map((_, xi) => {
@@ -380,17 +386,19 @@ chrome.extension.sendMessage({}, function (response) {
           .flat();
       }
 
+      /* 
+       *  Create a single dot DOM element with the approriate class names and append it to the overlay
+       */
       function createDot(dot, className) {
         const dotEl = document.createElement("div");
-        dotEl.classList.add(...[
-            "c8a11y-dot",
-            dot[0],
-            dot[1],
-          ], ...[className]);
+        dotEl.classList.add(...["c8a11y-dot", dot[0], dot[1]], ...[className]);
         overlayEl.appendChild(dotEl);
         return dotEl;
       }
 
+      /* 
+       *  Remove a dot from the DOM
+       */
       function removeDot(e, dotEl) {
         dotEl.classList.add("animate");
 
@@ -399,6 +407,21 @@ chrome.extension.sendMessage({}, function (response) {
         }, 300);
       }
 
+      /* 
+       *  Calibration is complete once all of the dots have been removed from the DOM. 
+       *  Check if the model isn't already training and if not, call the specified function
+       */
+      function checkIfCalibrationComplete(onCalibrationCompletion) {
+        setTimeout(function () {
+          if (!overlayEl.hasChildNodes() && !state.isAlreadyTraining) {
+            onCalibrationCompletion();
+          }
+        }, 500);
+      }
+
+      /* 
+       *  Add more calibration dots if prompted
+       */
       async function addAdditionalCalibrationDots() {
         initMouseHighlighter();
 
@@ -411,19 +434,14 @@ chrome.extension.sendMessage({}, function (response) {
 
           dotEl.addEventListener("click", async function (e) {
             removeDot(e, dotEl);
-
-            setTimeout(function () {
-              if (
-                !overlayEl.hasChildNodes() &&
-                !state.isAlreadyTraining
-              ) {
-                train();
-              }
-            }, 500);
+            checkIfCalibrationComplete(train);
           });
         });
       }
 
+      /* 
+       *  Add calibration dots as child nodes of the overlay element
+       */
       async function addInitialCalibrationDots() {
         initMouseHighlighter();
 
@@ -432,18 +450,15 @@ chrome.extension.sendMessage({}, function (response) {
 
           dotEl.addEventListener("click", async function (e) {
             removeDot(e, dotEl);
-
-            setTimeout(function () {
-              if (!overlayEl.hasChildNodes() && !state.isAlreadyTraining) {
-                initInfoModal(
-                  `<p>Great! You've collected ${dataSet.length} data points. For a more accurate prediction we recommend doing one more round of data collection before training your model.</p>`,
-                  "OK!",
-                  addAdditionalCalibrationDots,
-                  "Train model using current data set",
-                  train
-                );
-              }
-            }, 500);
+            checkIfCalibrationComplete(() => {
+              initInfoModal(
+                `<p>Great! You've collected ${dataSet.length} data points. For a more accurate prediction we recommend doing one more round of data collection before training your model.</p>`,
+                "OK!",
+                addAdditionalCalibrationDots,
+                "Train model using current data set",
+                train
+              );
+            });
           });
         });
       }
@@ -469,7 +484,7 @@ chrome.extension.sendMessage({}, function (response) {
         overlayEl = document.createElement("div");
         overlayEl.classList.add("c8a11y-overlay");
         // Lock scroll on body
-        bodyEl.style.overflow = 'hidden';
+        bodyEl.style.overflow = "hidden";
         bodyEl.appendChild(overlayEl);
 
         initDataCollection();
@@ -604,7 +619,9 @@ chrome.extension.sendMessage({}, function (response) {
         initInfoModal(
           "<p>You’ve successfully activated <i>c8a11y</i>!</p><p><i>c8a11y</i> is an application that determines where you are looking in the browser, but first, the application needs to be trained. To do so, simply </p><ol><li>Ensure <b>access to your camera is enabled</b></li><li>Click away all of the <div class='c8a11y-dot inline'></div> green dots on the screen</li><li>Keep looking at the <div class='c8a11y-mouse-target inline'></div> bright blue dot whilst moving the cursor around</li></ol><p>Though not essential, the bright blue rectangle can be used as a guide for positioning your head and might result in more accurate results.</p><p><i>Ready?</i>",
           "Let's go!",
-          setShouldRenderOverlay(true)
+          () => {
+            setShouldRenderOverlay(true);
+          }
         );
 
         await initVideoStream();
