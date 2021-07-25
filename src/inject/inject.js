@@ -4,7 +4,7 @@ chrome.extension.sendMessage({}, function (response) {
       clearInterval(readyStateCheckInterval);
 
       /*
-        Global application state
+        Define global application state
       */
       const state = {
         isFirstLoad: true,
@@ -13,20 +13,21 @@ chrome.extension.sendMessage({}, function (response) {
         shouldPredict: true,
       }
 
+      /* 
+        Define global DOM elements
+      */
       const bodyEl = document.querySelector("body");
       let videoEl;
       let canvasEl;
       let overlayEl;
 
-      const initialDotCountX = 6;
-      const initialDotCountY = 4;
-      const additionalDotCountX = 5;
-      const additionalDotCountY = 3;
-
-      const totalDataPointsForTraining =
-        initialDotCountX +
-        initialDotCountY +
-        additionalDotCountX * additionalDotCountY;
+      /* 
+        Specify number of dots used for calibration
+      */
+      const dotCount = {
+        x: 6,
+        y: 4,
+      }
 
       const dataSet = [];
       const inputsMin = [];
@@ -369,9 +370,23 @@ chrome.extension.sendMessage({}, function (response) {
         }
       }
 
-      function createDot(classes) {
+      function initDots() {
+        return [...Array(dotCount.x)]
+          .map((_, xi) => {
+            return [...Array(dotCount.y)].map((_, yi) => {
+              return [`x${xi + 1}`, `y${yi + 1}`];
+            });
+          })
+          .flat();
+      }
+
+      function createDot(dot, className) {
         const dotEl = document.createElement("div");
-        dotEl.classList.add(...classes);
+        dotEl.classList.add(...[
+            "c8a11y-dot",
+            dot[0],
+            dot[1],
+          ], ...[className]);
         overlayEl.appendChild(dotEl);
         return dotEl;
       }
@@ -387,21 +402,12 @@ chrome.extension.sendMessage({}, function (response) {
       async function addAdditionalCalibrationDots() {
         initMouseHighlighter();
 
-        const dots = [...Array(additionalDotCountX)]
-          .map((_, xi) => {
-            return [...Array(additionalDotCountY)].map((_, yi) => {
-              return [`x${xi + 1}`, `y${yi + 1}`];
-            });
-          })
-          .flat();
+        // Update dot count for second round of calibration
+        dotCount.x = 5;
+        dotCount.y = 3;
 
-        dots.map((dot) => {
-          const dotEl = createDot([
-            "c8a11y-dot",
-            "c8a11y-additional-dot",
-            dot[0],
-            dot[1],
-          ]);
+        initDots().map((dot) => {
+          const dotEl = createDot(dot, "c8a11y-additional-dot");
 
           dotEl.addEventListener("click", async function (e) {
             removeDot(e, dotEl);
@@ -409,7 +415,6 @@ chrome.extension.sendMessage({}, function (response) {
             setTimeout(function () {
               if (
                 !overlayEl.hasChildNodes() &&
-                dataSet.length >= totalDataPointsForTraining &&
                 !state.isAlreadyTraining
               ) {
                 train();
@@ -422,21 +427,8 @@ chrome.extension.sendMessage({}, function (response) {
       async function addInitialCalibrationDots() {
         initMouseHighlighter();
 
-        const dots = [...Array(initialDotCountX)]
-          .map((_, xi) => {
-            return [...Array(initialDotCountY)].map((_, yi) => {
-              return [`x${xi + 1}`, `y${yi + 1}`];
-            });
-          })
-          .flat();
-
-        dots.map((dot) => {
-          const dotEl = createDot([
-            "c8a11y-dot",
-            "c8a11y-initial-dot",
-            dot[0],
-            dot[1],
-          ]);
+        initDots().map((dot) => {
+          const dotEl = createDot(dot, "c8a11y-initial-dot");
 
           dotEl.addEventListener("click", async function (e) {
             removeDot(e, dotEl);
