@@ -13,10 +13,10 @@ chrome.extension.sendMessage({}, function (response) {
       let canvasEl;
       let overlayEl;
 
-      const initialDotCountX = 8;
-      const initialDotCountY = 6;
-      const additionalDotCountX = 7;
-      const additionalDotCountY = 5;
+      const initialDotCountX = 6;
+      const initialDotCountY = 4;
+      const additionalDotCountX = 5;
+      const additionalDotCountY = 3;
       const totalDataPointsForTraining =
         initialDotCountX +
         initialDotCountY +
@@ -302,7 +302,7 @@ chrome.extension.sendMessage({}, function (response) {
         const printCallback = {
           onEpochEnd: (epoch, log) => {
             updateProgress(epoch / TOTAL_EPOCHS * 100);
-            console.log(epoch, log);
+            // console.log(epoch, log);
           },
         };
 
@@ -314,7 +314,7 @@ chrome.extension.sendMessage({}, function (response) {
             batchSize: 10,
           })
           .then((history) => {
-            console.log("Training complete");
+            console.log("Training complete!");
             updateInfoBanner(
               "Look around the screen to predict. You can toggle predictions on or off using the button 👉"
             );

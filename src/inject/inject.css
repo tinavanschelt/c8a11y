@@ -9,11 +9,11 @@
   --video-width: 220px;
   --video-height: 180px;
   --initial-distance-from-edge: 0.5rem;
-  --initial-percentage-multiplier-x: 14.29%; /* 100 / 7 */
-  --initial-percentage-multiplier-y: 20%; /* 100 / 5 */
-  --additional-distance-from-edge: 8%;
-  --additional-percentage-multiplier-x: 16.67%; /* 100 / 6 */
-  --additional-percentage-multiplier-y: 25%; /* 100 / 4 */
+  --initial-percentage-multiplier-x: calc(100% / 5);
+  --initial-percentage-multiplier-y: calc(100% / 3);
+  --additional-distance-from-edge: 10%;
+  --additional-percentage-multiplier-x: calc(100% / 4);
+  --additional-percentage-multiplier-y: calc(100% / 2);
 }
 
 /* ==========================================================================
@@ -223,18 +223,9 @@ button.c8a11y-predict-toggle-button {
 }
 
 .c8a11y-initial-dot.x6 {
-  left: calc(var(--initial-percentage-multiplier-x) * 5);
-}
-
-.c8a11y-initial-dot.x7 {
-  left: calc(var(--initial-percentage-multiplier-x) * 6);
-}
-
-.c8a11y-initial-dot.x8 {
   right: var(--initial-distance-from-edge);
   margin: 0 !important;
 }
-
 .c8a11y-initial-dot.y1 {
   top: var(--initial-distance-from-edge);
 }
@@ -248,14 +239,6 @@ button.c8a11y-predict-toggle-button {
 }
 
 .c8a11y-initial-dot.y4 {
-  top: calc(var(--initial-percentage-multiplier-y) * 3);
-}
-
-.c8a11y-initial-dot.y5 {
-  top: calc(var(--initial-percentage-multiplier-y) * 4);
-}
-
-.c8a11y-initial-dot.y6 {
   bottom: var(--initial-distance-from-edge);
   margin: 0 !important;
 }
@@ -271,22 +254,14 @@ button.c8a11y-predict-toggle-button {
 }
 
 .c8a11y-additional-dot.x3 {
-  left: calc(var(--additional-percentage-multiplier-x) * 2 + 2.5%);
+  left: calc(var(--additional-percentage-multiplier-x) * 2);
 }
 
 .c8a11y-additional-dot.x4 {
-  left: calc(var(--additional-percentage-multiplier-x) * 3);
+  left: calc(var(--additional-percentage-multiplier-x) * 3 - 5%);
 }
 
 .c8a11y-additional-dot.x5 {
-  left: calc(var(--additional-percentage-multiplier-x) * 4 - 2.5%);
-}
-
-.c8a11y-additional-dot.x6 {
-  left: calc(var(--additional-percentage-multiplier-x) * 5 - 5%);
-}
-
-.c8a11y-additional-dot.x7 {
   right: var(--additional-distance-from-edge);
 }
 
@@ -295,18 +270,10 @@ button.c8a11y-predict-toggle-button {
 }
 
 .c8a11y-additional-dot.y2 {
-  top: calc(var(--additional-percentage-multiplier-y) * 1 + 5%);
+  top: calc(var(--additional-percentage-multiplier-y) * 1);
 }
 
 .c8a11y-additional-dot.y3 {
-  top: calc(var(--additional-percentage-multiplier-y) * 2);
-}
-
-.c8a11y-additional-dot.y4 {
-  top: calc(var(--additional-percentage-multiplier-y) * 3 - 5%);
-}
-
-.c8a11y-additional-dot.y5 {
   bottom: var(--additional-distance-from-edge);
 }
 
