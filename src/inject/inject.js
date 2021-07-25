@@ -616,7 +616,9 @@ chrome.extension.sendMessage({}, function (response) {
       /* SECTION: MAIN */
 
       async function main() {
+        // First add the info banner to tell use that the video stream is loading
         initInfoBanner();
+        // Fire modal with instructions of how to use the application / extension
         initInfoModal(
           "<p>You’ve successfully activated <i>c8a11y</i>!</p><p><i>c8a11y</i> is an application that determines where you are looking in the browser, but first, the application needs to be trained. To do so, simply </p><ol><li>Ensure <b>access to your camera is enabled</b></li><li>Click away all of the <div class='c8a11y-dot inline'></div> green dots on the screen</li><li>Keep looking at the <div class='c8a11y-mouse-target inline'></div> bright blue dot whilst moving the cursor around</li></ol><p>Though not essential, the bright blue rectangle can be used as a guide for positioning your head and might result in more accurate results.</p><p><i>Ready?</i>",
           "Let's go!",
@@ -625,6 +627,7 @@ chrome.extension.sendMessage({}, function (response) {
           }
         );
 
+        // Setup the video stream
         await initVideoStream();
 
         if (videoEl && canvasEl) {
@@ -637,6 +640,7 @@ chrome.extension.sendMessage({}, function (response) {
           const ctx = initCanvas(canvasEl);
           await renderKeypoints(ctx, canvasEl, videoEl);
           if (state.shouldRenderOverlay) {
+            // Add overlay, only once video stream and canvas has been configured
             initOverlay();
           }
         } else {
