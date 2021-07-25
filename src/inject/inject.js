@@ -17,6 +17,7 @@ chrome.extension.sendMessage({}, function (response) {
       const initialDotCountY = 4;
       const additionalDotCountX = 5;
       const additionalDotCountY = 3;
+
       const totalDataPointsForTraining =
         initialDotCountX +
         initialDotCountY +
@@ -234,8 +235,9 @@ chrome.extension.sendMessage({}, function (response) {
 
         // cleanup
         answer.dispose();
+        tf.dispose();
         if (shouldPredict) {
-          setTimeout(initModelPrediction, 100);
+          setTimeout(initModelPrediction, 50);
         }
       }
 
