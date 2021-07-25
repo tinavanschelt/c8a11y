@@ -183,6 +183,32 @@ chrome.extension.sendMessage({}, function (response) {
         };
       }
 
+      async function splitDataSets(inputs, outputs) {
+        const lengthOfTestData = Math.round(inputs.length * 0.15);
+        const testIndexes = [];
+        while (testIndexes.length < lengthOfTestData) {
+          const i = Math.floor(Math.random() * inputs.length) + 1;
+          if (testIndexes.indexOf(i) === -1) {
+            testIndexes.push(i);
+          }
+        }
+
+        const testInputs = testIndexes.map((i) => inputs[i]);
+        const testOutputs = testIndexes.map((i) => outputs[i]);
+
+        testIndexes.map((i) => {
+          testInputs.push(inputs[i]);
+          testOutputs.push(outputs[i]);
+          inputs[i] = null;
+          outputs[i] = null;
+        })
+
+        const trainInputs = inputs.filter((val) => val !== null);
+        const trainOutputs = outputs.filter((val) => val !== null);
+
+        return { trainInputs, trainOutputs, testInputs, testOutputs };
+      }
+
       /* SECTION: POPUP INFO MODAL */
 
       function initInfoModal(
@@ -324,24 +350,35 @@ chrome.extension.sendMessage({}, function (response) {
         ).style.width = `${progressAsPercentage}%`;
       }
 
-      /* SECTION: TRAIN THE TENSORFLOW MODEL */
+      /* SECTION: TRAIN AND EVALUATE THE TENSORFLOW MODEL */
+
+      async function evaluate(testInputs, testOutputs) {
+        const xs = tf.tensor2d(testInputs);
+        const ys = tf.tensor2d(testOutputs);
+
+        const result = model.evaluate(xs, ys);
+        result.print();
+      }
 
       async function train() {
+        state.isAlreadyTraining = true;
         // Unlock scroll on body
         bodyEl.style.overflow = "auto";
         updateInfoBanner(
           "Training model...<div class='c8a11y-progress-bar'><div class='c8a11y-progress'></div></div>"
         );
-        const { inputs, outputs } = await cleanupData(dataSet);
-        state.isAlreadyTraining = true;
 
-        const xs = tf.tensor2d(inputs);
-        const ys = tf.tensor2d(outputs);
+        const { inputs, outputs } = await cleanupData(dataSet);
+        const { trainInputs, trainOutputs, testInputs, testOutputs } =
+          await splitDataSets(inputs, outputs);
+
+        const xs = tf.tensor2d(trainInputs);
+        const ys = tf.tensor2d(trainOutputs);
 
         const hiddenLayer = tf.layers.dense({
           activation: "relu",
           inputShape: [4],
-          units: inputs.length,
+          units: trainInputs.length,
         });
 
         const outputLayer = tf.layers.dense({
@@ -365,7 +402,7 @@ chrome.extension.sendMessage({}, function (response) {
           },
         };
 
-        // train model
+        // Train model
         model
           .fit(xs, ys, {
             epochs: TOTAL_EPOCHS,
@@ -377,6 +414,8 @@ chrome.extension.sendMessage({}, function (response) {
               "Look around the screen to predict. You can toggle predictions on or off using the button 👉"
             );
             state.shouldPredict = true;
+            // Evaluate model
+            evaluate(testInputs, testOutputs);
             initPredictToggleButton();
             initModelPrediction();
           });
@@ -561,7 +600,7 @@ chrome.extension.sendMessage({}, function (response) {
           const b = leftEyeEdgeKeypoint.y - rightEyeEdgeKeypoint.y;
           const distance = Math.sqrt(a * a + b * b);
 
-          // Draw "peephole" frame
+          // Draw frame around user's eyes
           const padding = distance * 0.2; // add 20% x-padding
           const frameWidth = distance + padding;
           const frameHeight = distance / 3;
