@@ -7,7 +7,8 @@ chrome.extension.sendMessage({}, function (response) {
       const state = {
         isFirstLoad: true,
         isAlreadyTraining: false,
-        shouldRenderOverlay: false,
+        videoHasLoaded: false,
+        shouldRenderOverlay: true,
         isPredictMode: true,
         isTestMode: false,
       };
@@ -500,7 +501,7 @@ chrome.extension.sendMessage({}, function (response) {
           const xs = tf.tensor2d(testInputs);
           const ys = tf.tensor2d(testOutputs);
 
-          const result = await model.evaluate(xs, ys); // Evaluate the model using test data
+          const result = model.evaluate(xs, ys); // Evaluate the model using test data
 
           // Cleanup tensors
           xs.dispose();
@@ -606,6 +607,7 @@ chrome.extension.sendMessage({}, function (response) {
 
       /* Remove a dot from the DOM */
       function removeDot(e, dotEl) {
+        console.log("REMOVING DOT");
         dotEl.classList.add("animate");
 
         setTimeout(function () {
@@ -679,6 +681,7 @@ chrome.extension.sendMessage({}, function (response) {
       /* SECTION: ADD KEY ELEMENTS TO THE DOM */
 
       function initOverlay() {
+        state.shouldRenderOverlay = false;
         overlayEl = document.createElement("div");
         overlayEl.classList.add("c8a11y-overlay");
         // Lock scroll on body
@@ -824,12 +827,18 @@ chrome.extension.sendMessage({}, function (response) {
           "<p>You’ve successfully activated <i>c8a11y</i>!</p><p><i>c8a11y</i> is an application that determines where you are looking in the browser, but first, the application needs to be trained. To do so, simply </p><ol><li>Ensure <b>access to your camera is enabled</b></li><li>Click away all of the <div class='c8a11y-dot inline'></div> green dots on the screen</li><li>Keep looking at the <div class='c8a11y-mouse-target inline'></div> bright blue dot whilst moving the cursor around</li></ol><p>Though not essential, the bright blue rectangle can be used as a guide for positioning your head and might result in more accurate results.</p><p><i>Ready?</i>",
           "Let's go!",
           () => {
-            state.shouldRenderOverlay = true;
+            // Add overlay, only if it hasn't been rendered yet
+            if (state.videoHasLoaded && state.shouldRenderOverlay) {
+              initOverlay();
+            } else {
+              state.videoHasLoaded = true;
+            }
           }
         );
 
         // Setup the video stream
         await initVideoStream();
+        state.videoHasLoaded = true;
 
         if (videoEl && canvasEl) {
           videoEl.play();
@@ -840,7 +849,7 @@ chrome.extension.sendMessage({}, function (response) {
 
           const ctx = initCanvas(canvasEl);
           await renderKeypoints(ctx, canvasEl, videoEl);
-          if (state.shouldRenderOverlay) {
+          if (state.videoHasLoaded && state.shouldRenderOverlay) {
             // Add overlay, only once video stream and canvas has been configured
             initOverlay();
           }
